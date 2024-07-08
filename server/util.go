@@ -37,6 +37,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/version"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // DONTCOVER
@@ -183,10 +184,38 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 		}
 	}
 
-	logger := log.NewLogger(tmlog.NewSyncWriter(os.Stdout), opts...).With(log.ModuleKey, "server")
+	logMaxSize := serverCtx.Viper.GetInt(flags.FlagLogMaxSize)
+	logMaxAge := serverCtx.Viper.GetInt(flags.FlagLogMaxAge)
+	logMaxBackups := serverCtx.Viper.GetInt(flags.FlagLogMaxBackups)
+
+	rootDir := serverCtx.Viper.GetString(flags.FlagHome)
+	logPath := filepath.Join(rootDir, "log")
+	logFile := filepath.Join(logPath, "chain.log")
+
+	loggerWrite := &lumberjack.Logger{
+		Filename:   logFile,
+		MaxSize:    logMaxSize,
+		MaxAge:     logMaxAge,
+		MaxBackups: logMaxBackups,
+		Compress:   false,
+	}
+
+	go logRotate(loggerWrite)
+
+	logger := log.NewLogger(tmlog.NewSyncWriter(loggerWrite), opts...).With(log.ModuleKey, "server")
 	serverCtx.Logger = serverlog.CometLoggerWrapper{Logger: logger}
 
 	return SetCmdServerContext(cmd, serverCtx)
+}
+
+func logRotate(loggerWrite *lumberjack.Logger) {
+	for {
+		nowTime := time.Now().UTC().Truncate(time.Hour)
+		next := nowTime.Add(time.Hour)
+		after := next.Unix() - nowTime.Unix() - 1
+		<-time.After(time.Duration(after) * time.Second)
+		loggerWrite.Rotate()
+	}
 }
 
 // GetServerContextFromCmd returns a Context from a command or an empty Context

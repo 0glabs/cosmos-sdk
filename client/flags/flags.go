@@ -83,9 +83,12 @@ const (
 	FlagAux              = "aux"
 
 	// Tendermint logging flags
-	FlagLogLevel   = "log_level"
-	FlagLogFormat  = "log_format"
-	FlagLogNoColor = "log_no_color"
+	FlagLogLevel      = "log_level"
+	FlagLogFormat     = "log_format"
+	FlagLogNoColor    = "log_no_color"
+	FlagLogMaxSize    = "log_max_size"
+	FlagLogMaxAge     = "log_max_age"
+	FlagLogMaxBackups = "log_max_backups"
 )
 
 // LineBreak can be included in a command list to provide a blank line
