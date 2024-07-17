@@ -19,24 +19,16 @@ var (
 	KeyInflationMin        = []byte("InflationMin")
 	KeyGoalBonded          = []byte("GoalBonded")
 	KeyBlocksPerYear       = []byte("BlocksPerYear")
+	KeyMaxStakedRatio      = []byte("MaxStakedRatio")
+	KeyApyAtMaxStakedRatio = []byte("ApyAtMaxStakedRatio")
+	KeyMinStakedRatio      = []byte("MinStakedRatio")
+	KeyApyAtMinStakedRatio = []byte("ApyAtMinStakedRatio")
+	KeyDecayRate           = []byte("DecayRate")
 )
 
 // ParamTable for minting module.
 func ParamKeyTable() paramtypes.KeyTable {
 	return paramtypes.NewKeyTable().RegisterParamSet(&Params{})
-}
-
-func NewParams(
-	mintDenom string, inflationRateChange, inflationMax, inflationMin, goalBonded sdk.Dec, blocksPerYear uint64,
-) Params {
-	return Params{
-		MintDenom:           mintDenom,
-		InflationRateChange: inflationRateChange,
-		InflationMax:        inflationMax,
-		InflationMin:        inflationMin,
-		GoalBonded:          goalBonded,
-		BlocksPerYear:       blocksPerYear,
-	}
 }
 
 // default minting module parameters
@@ -48,6 +40,11 @@ func DefaultParams() Params {
 		InflationMin:        sdk.NewDecWithPrec(7, 2),
 		GoalBonded:          sdk.NewDecWithPrec(67, 2),
 		BlocksPerYear:       uint64(60 * 60 * 8766 / 5), // assuming 5 second block times
+		MaxStakedRatio:      sdk.NewDecWithPrec(80, 2),  // 80%
+		ApyAtMaxStakedRatio: sdk.NewDecWithPrec(5, 2),   // 5%
+		MinStakedRatio:      sdk.NewDecWithPrec(25, 2),  // 25%
+		ApyAtMinStakedRatio: sdk.NewDecWithPrec(30, 2),  // 30%
+		DecayRate:           sdk.NewDecWithPrec(15, 1),  // 1.5
 	}
 }
 
@@ -96,7 +93,17 @@ func (p *Params) ParamSetPairs() paramtypes.ParamSetPairs {
 		paramtypes.NewParamSetPair(KeyInflationMin, &p.InflationMin, validateInflationMin),
 		paramtypes.NewParamSetPair(KeyGoalBonded, &p.GoalBonded, validateGoalBonded),
 		paramtypes.NewParamSetPair(KeyBlocksPerYear, &p.BlocksPerYear, validateBlocksPerYear),
+		paramtypes.NewParamSetPair(KeyMaxStakedRatio, &p.MaxStakedRatio, dummyValidate),
+		paramtypes.NewParamSetPair(KeyApyAtMaxStakedRatio, &p.ApyAtMaxStakedRatio, dummyValidate),
+		paramtypes.NewParamSetPair(KeyMinStakedRatio, &p.MinStakedRatio, dummyValidate),
+		paramtypes.NewParamSetPair(KeyApyAtMinStakedRatio, &p.ApyAtMinStakedRatio, dummyValidate),
+		paramtypes.NewParamSetPair(KeyDecayRate, &p.DecayRate, dummyValidate),
 	}
+}
+
+func dummyValidate(i interface{}) error {
+	// TODO: implement
+	return nil
 }
 
 func validateMintDenom(i interface{}) error {

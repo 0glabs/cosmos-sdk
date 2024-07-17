@@ -7,7 +7,46 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	"github.com/cosmos/cosmos-sdk/x/mint/types"
+	"github.com/shopspring/decimal"
 )
+
+func decExp(x sdk.Dec) sdk.Dec {
+	xDec := decimal.NewFromBigInt(x.BigInt(), -18)
+	expDec, _ := xDec.ExpTaylor(18)
+	expInt := expDec.Shift(18).BigInt()
+	return sdk.NewDecFromBigIntWithPrec(expInt, 18)
+}
+
+func NextInflationRate(ctx sdk.Context, params types.Params, bondedRatio sdk.Dec, circulatingRatio sdk.Dec) sdk.Dec {
+	X := bondedRatio.Quo(circulatingRatio)
+	ctx.Logger().Info("NextInflationRate", "params", params)
+	var apy sdk.Dec
+	if X.LT(params.MinStakedRatio) {
+		apy = params.ApyAtMinStakedRatio
+	} else if X.GT(params.MaxStakedRatio) {
+		apy = params.ApyAtMaxStakedRatio
+	} else {
+		exp := params.DecayRate.Neg().Mul(params.MaxStakedRatio.Sub(params.MinStakedRatio))
+		c := decExp(exp)
+		d := params.ApyAtMaxStakedRatio.Sub(params.ApyAtMinStakedRatio.Mul(c)).Quo(sdk.OneDec().Sub(c))
+		expBonded := params.DecayRate.Neg().Mul(X.Sub(params.MinStakedRatio))
+		cBonded := decExp(expBonded)
+		e := params.ApyAtMinStakedRatio.Sub(d).Mul(cBonded)
+		apy = d.Add(e)
+	}
+
+	inflation := apy.Mul(bondedRatio)
+
+	ctx.Logger().Info(
+		"nextInflationRate",
+		"bondedRatio", bondedRatio,
+		"circulatingRatio", circulatingRatio,
+		"apy", apy,
+		"inflation", inflation,
+		"params", params,
+	)
+	return inflation
+}
 
 // BeginBlocker mints new tokens for the previous block.
 func BeginBlocker(ctx sdk.Context, k keeper.Keeper, ic types.InflationCalculationFn) {
@@ -21,7 +60,7 @@ func BeginBlocker(ctx sdk.Context, k keeper.Keeper, ic types.InflationCalculatio
 	totalStakingSupply := k.StakingTokenSupply(ctx)
 	bondedRatio := k.BondedRatio(ctx)
 	circulatingRaio := k.CirculatingRatio(ctx)
-	minter.Inflation = ic(ctx, minter, params, bondedRatio, circulatingRaio)
+	minter.Inflation = NextInflationRate(ctx, params, bondedRatio, circulatingRaio)
 	minter.AnnualProvisions = minter.NextAnnualProvisions(params, totalStakingSupply)
 	k.SetMinter(ctx, minter)
 
