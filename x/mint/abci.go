@@ -21,40 +21,21 @@ func NextInflationRate(ctx sdk.Context, params types.Params, bondedRatio sdk.Dec
 	X := bondedRatio.Quo(circulatingRatio)
 	ctx.Logger().Info("NextInflationRate", "params", params)
 	var apy sdk.Dec
-	if X.LT(params.XMin) {
-		apy = params.YMax
+	if X.LT(params.MinStakedRatio) {
+		apy = params.ApyAtMinStakedRatio
+	} else if X.GT(params.MaxStakedRatio) {
+		apy = params.ApyAtMaxStakedRatio
 	} else {
-		exp := params.DecayRate.Neg().Mul(params.XMax.Sub(params.XMin))
+		exp := params.DecayRate.Neg().Mul(params.MaxStakedRatio.Sub(params.MinStakedRatio))
 		c := decExp(exp)
-		d := params.YMin.Sub(params.YMax.Mul(c)).Quo(sdk.OneDec().Sub(c))
-		expBonded := params.DecayRate.Neg().Mul(X.Sub(params.XMin))
+		d := params.ApyAtMaxStakedRatio.Sub(params.ApyAtMinStakedRatio.Mul(c)).Quo(sdk.OneDec().Sub(c))
+		expBonded := params.DecayRate.Neg().Mul(X.Sub(params.MinStakedRatio))
 		cBonded := decExp(expBonded)
-		e := params.YMax.Sub(d).Mul(cBonded)
+		e := params.ApyAtMinStakedRatio.Sub(d).Mul(cBonded)
 		apy = d.Add(e)
 	}
 
 	inflation := apy.Mul(bondedRatio)
-
-	// // The target annual inflation rate is recalculated for each previsions cycle. The
-	// // inflation is also subject to a rate change (positive or negative) depending on
-	// // the distance from the desired ratio (67%). The maximum rate change possible is
-	// // defined to be 13% per year, however the annual inflation is capped as between
-	// // 7% and 20%.
-
-	// // (1 - bondedRatio/GoalBonded) * InflationRateChange
-	// inflationRateChangePerYear := sdk.OneDec().
-	// 	Sub(bondedRatio.Quo(params.GoalBonded)).
-	// 	Mul(params.InflationRateChange)
-	// inflationRateChange := inflationRateChangePerYear.Quo(sdk.NewDec(int64(params.BlocksPerYear)))
-
-	// // adjust the new annual inflation for this next cycle
-	// inflation := minter.Inflation.Add(inflationRateChange) // note inflationRateChange may be negative
-	// if inflation.GT(params.InflationMax) {
-	// 	inflation = params.InflationMax
-	// }
-	// if inflation.LT(params.InflationMin) {
-	// 	inflation = params.InflationMin
-	// }
 
 	ctx.Logger().Info(
 		"nextInflationRate",
