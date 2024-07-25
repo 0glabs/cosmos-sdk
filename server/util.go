@@ -187,6 +187,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 	logMaxSize := serverCtx.Viper.GetInt(flags.FlagLogMaxSize)
 	logMaxAge := serverCtx.Viper.GetInt(flags.FlagLogMaxAge)
 	logMaxBackups := serverCtx.Viper.GetInt(flags.FlagLogMaxBackups)
+	logRotateInterval := serverCtx.Viper.GetInt(flags.FlagLogRotateInterval)
 
 	rootDir := serverCtx.Viper.GetString(flags.FlagHome)
 	logPath := filepath.Join(rootDir, "log")
@@ -200,7 +201,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 		Compress:   false,
 	}
 
-	go logRotate(loggerWrite)
+	go logRotate(loggerWrite, logRotateInterval)
 
 	var writer io.Writer
 	if serverCtx.Viper.GetBool(flags.FlagLogOutputConsole) {
@@ -215,13 +216,15 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 	return SetCmdServerContext(cmd, serverCtx)
 }
 
-func logRotate(loggerWrite *lumberjack.Logger) {
+func logRotate(loggerWrite *lumberjack.Logger, intervalByHour int) {
+	interval := time.Duration(intervalByHour) * time.Hour
 	for {
-		nowTime := time.Now().UTC().Truncate(time.Hour)
-		next := nowTime.Add(time.Hour)
-		after := next.Unix() - nowTime.Unix() - 1
+		nowTime := time.Now().UTC().Truncate(interval)
+		next := nowTime.Add(interval)
+		after := next.Unix() - time.Now().Unix() - 1
 		<-time.After(time.Duration(after) * time.Second)
 		loggerWrite.Rotate()
+		time.Sleep(time.Second)
 	}
 }
 
