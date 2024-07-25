@@ -202,8 +202,14 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 
 	go logRotate(loggerWrite)
 
-	logger := log.NewLogger(
-		tmlog.NewSyncWriter(io.MultiWriter(os.Stdout, loggerWrite)), opts...).With(log.ModuleKey, "server")
+	var writer io.Writer
+	if serverCtx.Viper.GetBool(flags.FlagLogOutputConsole) {
+		writer = tmlog.NewSyncWriter(io.MultiWriter(loggerWrite, os.Stdout))
+	} else {
+		writer = tmlog.NewSyncWriter(loggerWrite)
+	}
+
+	logger := log.NewLogger(writer, opts...).With(log.ModuleKey, "server")
 	serverCtx.Logger = serverlog.CometLoggerWrapper{Logger: logger}
 
 	return SetCmdServerContext(cmd, serverCtx)

@@ -35,6 +35,7 @@ func Execute(rootCmd *cobra.Command, envPrefix string, defaultHome string) error
 	rootCmd.PersistentFlags().Int(flags.FlagLogMaxSize, 1024, "Maximum space occupied by a single log file")
 	rootCmd.PersistentFlags().Int(flags.FlagLogMaxBackups, 168, "The maximum number of log files to be retained for split storage")
 	rootCmd.PersistentFlags().Int(flags.FlagLogMaxAge, 7, "The maximum retention time of the split and stored log files, in days")
+	rootCmd.PersistentFlags().Bool(flags.FlagLogOutputConsole, false, "Log output to console")
 
 	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, defaultHome)
 	return executor.ExecuteContext(ctx)
