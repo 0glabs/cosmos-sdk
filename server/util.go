@@ -198,7 +198,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 		MaxSize:    logMaxSize,
 		MaxAge:     logMaxAge,
 		MaxBackups: logMaxBackups,
-		Compress:   false,
+		Compress:   serverCtx.Viper.GetBool(flags.FlagLogCompress),
 	}
 
 	go logRotate(loggerWrite, logRotateInterval)

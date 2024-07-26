@@ -37,6 +37,7 @@ func Execute(rootCmd *cobra.Command, envPrefix string, defaultHome string) error
 	rootCmd.PersistentFlags().Int(flags.FlagLogMaxAge, 365, "The maximum retention time of the split and stored log files, in days")
 	rootCmd.PersistentFlags().Bool(flags.FlagLogOutputConsole, false, "Log output to console")
 	rootCmd.PersistentFlags().Int(flags.FlagLogRotateInterval, 24, "Log rotation interval in hours")
+	rootCmd.PersistentFlags().Bool(flags.FlagLogCompress, true, "Compress log files using gzip")
 
 	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, defaultHome)
 	return executor.ExecuteContext(ctx)
