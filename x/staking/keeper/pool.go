@@ -4,6 +4,7 @@ import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	vestexported "github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	"github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
@@ -66,6 +67,40 @@ func (k Keeper) TotalBondedTokens(ctx sdk.Context) math.Int {
 // StakingTokenSupply staking tokens from the total supply
 func (k Keeper) StakingTokenSupply(ctx sdk.Context) math.Int {
 	return k.bankKeeper.GetSupply(ctx, k.BondDenom(ctx)).Amount
+}
+
+func (k Keeper) StakingTokenCirculatingSupply(ctx sdk.Context) math.Int {
+	totalSupply := k.StakingTokenSupply(ctx)
+
+	totalLocked := math.ZeroInt()
+	k.vestingKeeper.IterateVestingAccounts(ctx, func(vestingAcc vestexported.VestingAccount) bool {
+		vestingCoins := vestingAcc.GetVestingCoins(ctx.BlockTime())
+		for _, coin := range vestingCoins {
+			if coin.Denom == k.BondDenom(ctx) {
+				totalLocked = totalLocked.Add(coin.Amount)
+				break
+			} else {
+				ctx.Logger().With("module", "x/staking").Info("non-staking token",
+					"acc", vestingAcc,
+					"coin", coin)
+			}
+		}
+		return false
+	})
+
+	// k.authKeeper.IterateAccounts(ctx, func(acc authtypes.AccountI) bool {
+	// 	if vestingAcc, ok := acc.(vestexported.VestingAccount); ok {
+	// 		vestingCoins := vestingAcc.GetVestingCoins(ctx.BlockTime())
+	// 		for _, coin := range vestingCoins {
+	// 			if coin.Denom == k.BondDenom(ctx) {
+	// 				totalLocked = totalLocked.Add(coin.Amount)
+	// 			}
+	// 		}
+	// 	}
+	// 	return false
+	// })
+
+	return totalSupply.Sub(totalLocked)
 }
 
 // BondedRatio the fraction of the staking tokens which are currently bonded
