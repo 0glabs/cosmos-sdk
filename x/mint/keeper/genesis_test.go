@@ -59,14 +59,13 @@ func (s *GenesisTestSuite) SetupTest() {
 func (s *GenesisTestSuite) TestImportExportGenesis() {
 	genesisState := types.DefaultGenesisState()
 	genesisState.Minter = types.NewMinter(sdk.NewDecWithPrec(20, 2), math.LegacyNewDec(1))
-	genesisState.Params = types.NewParams(
-		"testDenom",
-		sdk.NewDecWithPrec(15, 2),
-		sdk.NewDecWithPrec(22, 2),
-		sdk.NewDecWithPrec(9, 2),
-		sdk.NewDecWithPrec(69, 2),
-		uint64(60*60*8766/5),
-	)
+	genesisState.Params = types.DefaultParams()
+	genesisState.Params.MintDenom = "testDenom"
+	genesisState.Params.InflationRateChange = sdk.NewDecWithPrec(15, 2)
+	genesisState.Params.InflationMax = sdk.NewDecWithPrec(22, 2)
+	genesisState.Params.InflationMin = sdk.NewDecWithPrec(9, 2)
+	genesisState.Params.GoalBonded = sdk.NewDecWithPrec(69, 2)
+	genesisState.Params.BlocksPerYear = uint64(60 * 60 * 8766 / 5)
 
 	s.keeper.InitGenesis(s.sdkCtx, s.accountKeeper, genesisState)
 
