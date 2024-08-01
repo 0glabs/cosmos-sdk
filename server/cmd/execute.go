@@ -27,7 +27,13 @@ func Execute(rootCmd *cobra.Command, envPrefix string, defaultHome string) error
 
 	rootCmd.PersistentFlags().String(flags.FlagLogLevel, tmcfg.DefaultLogLevel, "The logging level (trace|debug|info|warn|error|fatal|panic)")
 	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
-	rootCmd.PersistentFlags().Bool(flags.FlagLogNoColor, false, "Disable colored logs")
+	rootCmd.PersistentFlags().Bool(flags.FlagLogNoColor, true, "Disable colored logs")
+	rootCmd.PersistentFlags().Int(flags.FlagLogMaxSize, 2048, "Maximum space occupied by a single log file")
+	rootCmd.PersistentFlags().Int(flags.FlagLogMaxBackups, 1024, "The maximum number of log files to be retained for split storage")
+	rootCmd.PersistentFlags().Int(flags.FlagLogMaxAge, 365, "The maximum retention time of the split and stored log files, in days")
+	rootCmd.PersistentFlags().Bool(flags.FlagLogOutputConsole, false, "Log output to console")
+	rootCmd.PersistentFlags().Int(flags.FlagLogRotateInterval, 24, "Log rotation interval in hours")
+	rootCmd.PersistentFlags().Bool(flags.FlagLogCompress, true, "Compress log files using gzip")
 
 	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, defaultHome)
 	return executor.ExecuteContext(ctx)
