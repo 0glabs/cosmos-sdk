@@ -50,12 +50,14 @@ func (s *KeeperTestSuite) SetupTest() {
 	accountKeeper.EXPECT().GetModuleAddress(stakingtypes.BondedPoolName).Return(bondedAcc.GetAddress())
 	accountKeeper.EXPECT().GetModuleAddress(stakingtypes.NotBondedPoolName).Return(notBondedAcc.GetAddress())
 	bankKeeper := stakingtestutil.NewMockBankKeeper(ctrl)
+	vestingKeeper := stakingtestutil.NewMockVestingKeeper(ctrl)
 
 	keeper := stakingkeeper.NewKeeper(
 		encCfg.Codec,
 		key,
 		accountKeeper,
 		bankKeeper,
+		vestingKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 	keeper.SetParams(ctx, stakingtypes.DefaultParams())

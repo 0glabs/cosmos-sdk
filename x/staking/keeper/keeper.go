@@ -26,6 +26,7 @@ type Keeper struct {
 	cdc        codec.BinaryCodec
 	authKeeper types.AccountKeeper
 	bankKeeper types.BankKeeper
+	vestingKeeper types.VestingKeeper
 	hooks      types.StakingHooks
 	authority  string
 }
@@ -36,6 +37,7 @@ func NewKeeper(
 	key storetypes.StoreKey,
 	ak types.AccountKeeper,
 	bk types.BankKeeper,
+	vk types.VestingKeeper,
 	authority string,
 ) *Keeper {
 	// ensure bonded and not bonded module accounts are set
@@ -57,6 +59,7 @@ func NewKeeper(
 		cdc:        cdc,
 		authKeeper: ak,
 		bankKeeper: bk,
+		vestingKeeper: vk,
 		hooks:      nil,
 		authority:  authority,
 	}
