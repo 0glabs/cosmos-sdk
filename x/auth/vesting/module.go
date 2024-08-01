@@ -18,8 +18,9 @@ import (
 	modulev1 "cosmossdk.io/api/cosmos/vesting/module/v1"
 	"cosmossdk.io/core/appmodule"
 
-	"github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/auth/vesting/keeper"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 )
 
@@ -78,15 +79,17 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 type AppModule struct {
 	AppModuleBasic
 
-	accountKeeper keeper.AccountKeeper
+	accountKeeper authkeeper.AccountKeeper
 	bankKeeper    types.BankKeeper
+	keeper        keeper.VestingKeeper
 }
 
-func NewAppModule(ak keeper.AccountKeeper, bk types.BankKeeper) AppModule {
+func NewAppModule(ak authkeeper.AccountKeeper, bk types.BankKeeper, vk keeper.VestingKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
 		accountKeeper:  ak,
 		bankKeeper:     bk,
+		keeper:         vk,
 	}
 }
 
@@ -132,8 +135,9 @@ func init() {
 type VestingInputs struct {
 	depinject.In
 
-	AccountKeeper keeper.AccountKeeper
+	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    types.BankKeeper
+	VestingKeeper keeper.VestingKeeper
 }
 
 type VestingOutputs struct {
@@ -143,7 +147,7 @@ type VestingOutputs struct {
 }
 
 func ProvideModule(in VestingInputs) VestingOutputs {
-	m := NewAppModule(in.AccountKeeper, in.BankKeeper)
+	m := NewAppModule(in.AccountKeeper, in.BankKeeper, in.VestingKeeper)
 
 	return VestingOutputs{Module: m}
 }

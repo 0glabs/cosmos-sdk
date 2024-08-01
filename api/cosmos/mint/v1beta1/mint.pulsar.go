@@ -500,13 +500,18 @@ func (x *fastReflection_Minter) ProtoMethods() *protoiface.Methods {
 }
 
 var (
-	md_Params                       protoreflect.MessageDescriptor
-	fd_Params_mint_denom            protoreflect.FieldDescriptor
-	fd_Params_inflation_rate_change protoreflect.FieldDescriptor
-	fd_Params_inflation_max         protoreflect.FieldDescriptor
-	fd_Params_inflation_min         protoreflect.FieldDescriptor
-	fd_Params_goal_bonded           protoreflect.FieldDescriptor
-	fd_Params_blocks_per_year       protoreflect.FieldDescriptor
+	md_Params                         protoreflect.MessageDescriptor
+	fd_Params_mint_denom              protoreflect.FieldDescriptor
+	fd_Params_inflation_rate_change   protoreflect.FieldDescriptor
+	fd_Params_inflation_max           protoreflect.FieldDescriptor
+	fd_Params_inflation_min           protoreflect.FieldDescriptor
+	fd_Params_goal_bonded             protoreflect.FieldDescriptor
+	fd_Params_blocks_per_year         protoreflect.FieldDescriptor
+	fd_Params_max_staked_ratio        protoreflect.FieldDescriptor
+	fd_Params_apy_at_max_staked_ratio protoreflect.FieldDescriptor
+	fd_Params_min_staked_ratio        protoreflect.FieldDescriptor
+	fd_Params_apy_at_min_staked_ratio protoreflect.FieldDescriptor
+	fd_Params_decay_rate              protoreflect.FieldDescriptor
 )
 
 func init() {
@@ -518,6 +523,11 @@ func init() {
 	fd_Params_inflation_min = md_Params.Fields().ByName("inflation_min")
 	fd_Params_goal_bonded = md_Params.Fields().ByName("goal_bonded")
 	fd_Params_blocks_per_year = md_Params.Fields().ByName("blocks_per_year")
+	fd_Params_max_staked_ratio = md_Params.Fields().ByName("max_staked_ratio")
+	fd_Params_apy_at_max_staked_ratio = md_Params.Fields().ByName("apy_at_max_staked_ratio")
+	fd_Params_min_staked_ratio = md_Params.Fields().ByName("min_staked_ratio")
+	fd_Params_apy_at_min_staked_ratio = md_Params.Fields().ByName("apy_at_min_staked_ratio")
+	fd_Params_decay_rate = md_Params.Fields().ByName("decay_rate")
 }
 
 var _ protoreflect.Message = (*fastReflection_Params)(nil)
@@ -621,6 +631,36 @@ func (x *fastReflection_Params) Range(f func(protoreflect.FieldDescriptor, proto
 			return
 		}
 	}
+	if x.MaxStakedRatio != "" {
+		value := protoreflect.ValueOfString(x.MaxStakedRatio)
+		if !f(fd_Params_max_staked_ratio, value) {
+			return
+		}
+	}
+	if x.ApyAtMaxStakedRatio != "" {
+		value := protoreflect.ValueOfString(x.ApyAtMaxStakedRatio)
+		if !f(fd_Params_apy_at_max_staked_ratio, value) {
+			return
+		}
+	}
+	if x.MinStakedRatio != "" {
+		value := protoreflect.ValueOfString(x.MinStakedRatio)
+		if !f(fd_Params_min_staked_ratio, value) {
+			return
+		}
+	}
+	if x.ApyAtMinStakedRatio != "" {
+		value := protoreflect.ValueOfString(x.ApyAtMinStakedRatio)
+		if !f(fd_Params_apy_at_min_staked_ratio, value) {
+			return
+		}
+	}
+	if x.DecayRate != "" {
+		value := protoreflect.ValueOfString(x.DecayRate)
+		if !f(fd_Params_decay_rate, value) {
+			return
+		}
+	}
 }
 
 // Has reports whether a field is populated.
@@ -648,6 +688,16 @@ func (x *fastReflection_Params) Has(fd protoreflect.FieldDescriptor) bool {
 		return x.GoalBonded != ""
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		return x.BlocksPerYear != uint64(0)
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		return x.MaxStakedRatio != ""
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		return x.ApyAtMaxStakedRatio != ""
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		return x.MinStakedRatio != ""
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		return x.ApyAtMinStakedRatio != ""
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		return x.DecayRate != ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -676,6 +726,16 @@ func (x *fastReflection_Params) Clear(fd protoreflect.FieldDescriptor) {
 		x.GoalBonded = ""
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		x.BlocksPerYear = uint64(0)
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		x.MaxStakedRatio = ""
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		x.ApyAtMaxStakedRatio = ""
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		x.MinStakedRatio = ""
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		x.ApyAtMinStakedRatio = ""
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		x.DecayRate = ""
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -710,6 +770,21 @@ func (x *fastReflection_Params) Get(descriptor protoreflect.FieldDescriptor) pro
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		value := x.BlocksPerYear
 		return protoreflect.ValueOfUint64(value)
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		value := x.MaxStakedRatio
+		return protoreflect.ValueOfString(value)
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		value := x.ApyAtMaxStakedRatio
+		return protoreflect.ValueOfString(value)
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		value := x.MinStakedRatio
+		return protoreflect.ValueOfString(value)
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		value := x.ApyAtMinStakedRatio
+		return protoreflect.ValueOfString(value)
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		value := x.DecayRate
+		return protoreflect.ValueOfString(value)
 	default:
 		if descriptor.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -742,6 +817,16 @@ func (x *fastReflection_Params) Set(fd protoreflect.FieldDescriptor, value proto
 		x.GoalBonded = value.Interface().(string)
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		x.BlocksPerYear = value.Uint()
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		x.MaxStakedRatio = value.Interface().(string)
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		x.ApyAtMaxStakedRatio = value.Interface().(string)
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		x.MinStakedRatio = value.Interface().(string)
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		x.ApyAtMinStakedRatio = value.Interface().(string)
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		x.DecayRate = value.Interface().(string)
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -774,6 +859,16 @@ func (x *fastReflection_Params) Mutable(fd protoreflect.FieldDescriptor) protore
 		panic(fmt.Errorf("field goal_bonded of message cosmos.mint.v1beta1.Params is not mutable"))
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		panic(fmt.Errorf("field blocks_per_year of message cosmos.mint.v1beta1.Params is not mutable"))
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		panic(fmt.Errorf("field max_staked_ratio of message cosmos.mint.v1beta1.Params is not mutable"))
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		panic(fmt.Errorf("field apy_at_max_staked_ratio of message cosmos.mint.v1beta1.Params is not mutable"))
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		panic(fmt.Errorf("field min_staked_ratio of message cosmos.mint.v1beta1.Params is not mutable"))
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		panic(fmt.Errorf("field apy_at_min_staked_ratio of message cosmos.mint.v1beta1.Params is not mutable"))
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		panic(fmt.Errorf("field decay_rate of message cosmos.mint.v1beta1.Params is not mutable"))
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -799,6 +894,16 @@ func (x *fastReflection_Params) NewField(fd protoreflect.FieldDescriptor) protor
 		return protoreflect.ValueOfString("")
 	case "cosmos.mint.v1beta1.Params.blocks_per_year":
 		return protoreflect.ValueOfUint64(uint64(0))
+	case "cosmos.mint.v1beta1.Params.max_staked_ratio":
+		return protoreflect.ValueOfString("")
+	case "cosmos.mint.v1beta1.Params.apy_at_max_staked_ratio":
+		return protoreflect.ValueOfString("")
+	case "cosmos.mint.v1beta1.Params.min_staked_ratio":
+		return protoreflect.ValueOfString("")
+	case "cosmos.mint.v1beta1.Params.apy_at_min_staked_ratio":
+		return protoreflect.ValueOfString("")
+	case "cosmos.mint.v1beta1.Params.decay_rate":
+		return protoreflect.ValueOfString("")
 	default:
 		if fd.IsExtension() {
 			panic(fmt.Errorf("proto3 declared messages do not support extensions: cosmos.mint.v1beta1.Params"))
@@ -891,6 +996,26 @@ func (x *fastReflection_Params) ProtoMethods() *protoiface.Methods {
 		if x.BlocksPerYear != 0 {
 			n += 1 + runtime.Sov(uint64(x.BlocksPerYear))
 		}
+		l = len(x.MaxStakedRatio)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.ApyAtMaxStakedRatio)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.MinStakedRatio)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.ApyAtMinStakedRatio)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
+		l = len(x.DecayRate)
+		if l > 0 {
+			n += 1 + l + runtime.Sov(uint64(l))
+		}
 		if x.unknownFields != nil {
 			n += len(x.unknownFields)
 		}
@@ -919,6 +1044,41 @@ func (x *fastReflection_Params) ProtoMethods() *protoiface.Methods {
 		if x.unknownFields != nil {
 			i -= len(x.unknownFields)
 			copy(dAtA[i:], x.unknownFields)
+		}
+		if len(x.DecayRate) > 0 {
+			i -= len(x.DecayRate)
+			copy(dAtA[i:], x.DecayRate)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.DecayRate)))
+			i--
+			dAtA[i] = 0x5a
+		}
+		if len(x.ApyAtMinStakedRatio) > 0 {
+			i -= len(x.ApyAtMinStakedRatio)
+			copy(dAtA[i:], x.ApyAtMinStakedRatio)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ApyAtMinStakedRatio)))
+			i--
+			dAtA[i] = 0x52
+		}
+		if len(x.MinStakedRatio) > 0 {
+			i -= len(x.MinStakedRatio)
+			copy(dAtA[i:], x.MinStakedRatio)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.MinStakedRatio)))
+			i--
+			dAtA[i] = 0x4a
+		}
+		if len(x.ApyAtMaxStakedRatio) > 0 {
+			i -= len(x.ApyAtMaxStakedRatio)
+			copy(dAtA[i:], x.ApyAtMaxStakedRatio)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.ApyAtMaxStakedRatio)))
+			i--
+			dAtA[i] = 0x42
+		}
+		if len(x.MaxStakedRatio) > 0 {
+			i -= len(x.MaxStakedRatio)
+			copy(dAtA[i:], x.MaxStakedRatio)
+			i = runtime.EncodeVarint(dAtA, i, uint64(len(x.MaxStakedRatio)))
+			i--
+			dAtA[i] = 0x3a
 		}
 		if x.BlocksPerYear != 0 {
 			i = runtime.EncodeVarint(dAtA, i, uint64(x.BlocksPerYear))
@@ -1188,6 +1348,166 @@ func (x *fastReflection_Params) ProtoMethods() *protoiface.Methods {
 						break
 					}
 				}
+			case 7:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field MaxStakedRatio", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.MaxStakedRatio = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 8:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ApyAtMaxStakedRatio", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ApyAtMaxStakedRatio = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 9:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field MinStakedRatio", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.MinStakedRatio = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 10:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field ApyAtMinStakedRatio", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.ApyAtMinStakedRatio = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
+			case 11:
+				if wireType != 2 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, fmt.Errorf("proto: wrong wireType = %d for field DecayRate", wireType)
+				}
+				var stringLen uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrIntOverflow
+					}
+					if iNdEx >= l {
+						return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					stringLen |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				intStringLen := int(stringLen)
+				if intStringLen < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				postIndex := iNdEx + intStringLen
+				if postIndex < 0 {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, runtime.ErrInvalidLength
+				}
+				if postIndex > l {
+					return protoiface.UnmarshalOutput{NoUnkeyedLiterals: input.NoUnkeyedLiterals, Flags: input.Flags}, io.ErrUnexpectedEOF
+				}
+				x.DecayRate = string(dAtA[iNdEx:postIndex])
+				iNdEx = postIndex
 			default:
 				iNdEx = preIndex
 				skippy, err := runtime.Skip(dAtA[iNdEx:])
@@ -1299,7 +1619,12 @@ type Params struct {
 	// goal of percent bonded atoms
 	GoalBonded string `protobuf:"bytes,5,opt,name=goal_bonded,json=goalBonded,proto3" json:"goal_bonded,omitempty"`
 	// expected blocks per year
-	BlocksPerYear uint64 `protobuf:"varint,6,opt,name=blocks_per_year,json=blocksPerYear,proto3" json:"blocks_per_year,omitempty"`
+	BlocksPerYear       uint64 `protobuf:"varint,6,opt,name=blocks_per_year,json=blocksPerYear,proto3" json:"blocks_per_year,omitempty"`
+	MaxStakedRatio      string `protobuf:"bytes,7,opt,name=max_staked_ratio,json=maxStakedRatio,proto3" json:"max_staked_ratio,omitempty"`
+	ApyAtMaxStakedRatio string `protobuf:"bytes,8,opt,name=apy_at_max_staked_ratio,json=apyAtMaxStakedRatio,proto3" json:"apy_at_max_staked_ratio,omitempty"`
+	MinStakedRatio      string `protobuf:"bytes,9,opt,name=min_staked_ratio,json=minStakedRatio,proto3" json:"min_staked_ratio,omitempty"`
+	ApyAtMinStakedRatio string `protobuf:"bytes,10,opt,name=apy_at_min_staked_ratio,json=apyAtMinStakedRatio,proto3" json:"apy_at_min_staked_ratio,omitempty"`
+	DecayRate           string `protobuf:"bytes,11,opt,name=decay_rate,json=decayRate,proto3" json:"decay_rate,omitempty"`
 }
 
 func (x *Params) Reset() {
@@ -1364,6 +1689,41 @@ func (x *Params) GetBlocksPerYear() uint64 {
 	return 0
 }
 
+func (x *Params) GetMaxStakedRatio() string {
+	if x != nil {
+		return x.MaxStakedRatio
+	}
+	return ""
+}
+
+func (x *Params) GetApyAtMaxStakedRatio() string {
+	if x != nil {
+		return x.ApyAtMaxStakedRatio
+	}
+	return ""
+}
+
+func (x *Params) GetMinStakedRatio() string {
+	if x != nil {
+		return x.MinStakedRatio
+	}
+	return ""
+}
+
+func (x *Params) GetApyAtMinStakedRatio() string {
+	if x != nil {
+		return x.ApyAtMinStakedRatio
+	}
+	return ""
+}
+
+func (x *Params) GetDecayRate() string {
+	if x != nil {
+		return x.DecayRate
+	}
+	return ""
+}
+
 var File_cosmos_mint_v1beta1_mint_proto protoreflect.FileDescriptor
 
 var file_cosmos_mint_v1beta1_mint_proto_rawDesc = []byte{
@@ -1387,7 +1747,7 @@ var file_cosmos_mint_v1beta1_mint_proto_rawDesc = []byte{
 	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64,
 	0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63, 0xd2, 0xb4, 0x2d, 0x0a, 0x63,
 	0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x10, 0x61, 0x6e, 0x6e, 0x75, 0x61,
-	0x6c, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x89, 0x04, 0x0a, 0x06,
+	0x6c, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x9e, 0x08, 0x0a, 0x06,
 	0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x12, 0x1d, 0x0a, 0x0a, 0x6d, 0x69, 0x6e, 0x74, 0x5f, 0x64,
 	0x65, 0x6e, 0x6f, 0x6d, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6d, 0x69, 0x6e, 0x74,
 	0x44, 0x65, 0x6e, 0x6f, 0x6d, 0x12, 0x70, 0x0a, 0x15, 0x69, 0x6e, 0x66, 0x6c, 0x61, 0x74, 0x69,
@@ -1418,22 +1778,55 @@ var file_cosmos_mint_v1beta1_mint_proto_rawDesc = []byte{
 	0x52, 0x0a, 0x67, 0x6f, 0x61, 0x6c, 0x42, 0x6f, 0x6e, 0x64, 0x65, 0x64, 0x12, 0x26, 0x0a, 0x0f,
 	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x5f, 0x70, 0x65, 0x72, 0x5f, 0x79, 0x65, 0x61, 0x72, 0x18,
 	0x06, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0d, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x50, 0x65, 0x72,
-	0x59, 0x65, 0x61, 0x72, 0x3a, 0x21, 0x98, 0xa0, 0x1f, 0x00, 0x8a, 0xe7, 0xb0, 0x2a, 0x18, 0x63,
-	0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b, 0x2f, 0x78, 0x2f, 0x6d, 0x69, 0x6e, 0x74,
-	0x2f, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x42, 0xc4, 0x01, 0x0a, 0x17, 0x63, 0x6f, 0x6d, 0x2e,
-	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x6d, 0x69, 0x6e, 0x74, 0x2e, 0x76, 0x31, 0x62, 0x65,
-	0x74, 0x61, 0x31, 0x42, 0x09, 0x4d, 0x69, 0x6e, 0x74, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01,
-	0x5a, 0x30, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b, 0x2e, 0x69, 0x6f, 0x2f, 0x61,
-	0x70, 0x69, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x6d, 0x69, 0x6e, 0x74, 0x2f, 0x76,
-	0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x3b, 0x6d, 0x69, 0x6e, 0x74, 0x76, 0x31, 0x62, 0x65, 0x74,
-	0x61, 0x31, 0xa2, 0x02, 0x03, 0x43, 0x4d, 0x58, 0xaa, 0x02, 0x13, 0x43, 0x6f, 0x73, 0x6d, 0x6f,
-	0x73, 0x2e, 0x4d, 0x69, 0x6e, 0x74, 0x2e, 0x56, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0xca, 0x02,
-	0x13, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x4d, 0x69, 0x6e, 0x74, 0x5c, 0x56, 0x31, 0x62,
-	0x65, 0x74, 0x61, 0x31, 0xe2, 0x02, 0x1f, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x4d, 0x69,
-	0x6e, 0x74, 0x5c, 0x56, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65,
-	0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x15, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x3a,
-	0x3a, 0x4d, 0x69, 0x6e, 0x74, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x62, 0x06,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x59, 0x65, 0x61, 0x72, 0x12, 0x66, 0x0a, 0x10, 0x6d, 0x61, 0x78, 0x5f, 0x73, 0x74, 0x61, 0x6b,
+	0x65, 0x64, 0x5f, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x42, 0x3c,
+	0xc8, 0xde, 0x1f, 0x00, 0xda, 0xde, 0x1f, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73,
+	0x2d, 0x73, 0x64, 0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63, 0xd2, 0xb4,
+	0x2d, 0x0a, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x0e, 0x6d, 0x61,
+	0x78, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x52, 0x61, 0x74, 0x69, 0x6f, 0x12, 0x72, 0x0a, 0x17,
+	0x61, 0x70, 0x79, 0x5f, 0x61, 0x74, 0x5f, 0x6d, 0x61, 0x78, 0x5f, 0x73, 0x74, 0x61, 0x6b, 0x65,
+	0x64, 0x5f, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x18, 0x08, 0x20, 0x01, 0x28, 0x09, 0x42, 0x3c, 0xc8,
+	0xde, 0x1f, 0x00, 0xda, 0xde, 0x1f, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d,
+	0x73, 0x64, 0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63, 0xd2, 0xb4, 0x2d,
+	0x0a, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x13, 0x61, 0x70, 0x79,
+	0x41, 0x74, 0x4d, 0x61, 0x78, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x52, 0x61, 0x74, 0x69, 0x6f,
+	0x12, 0x66, 0x0a, 0x10, 0x6d, 0x69, 0x6e, 0x5f, 0x73, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x5f, 0x72,
+	0x61, 0x74, 0x69, 0x6f, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x42, 0x3c, 0xc8, 0xde, 0x1f, 0x00,
+	0xda, 0xde, 0x1f, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63,
+	0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b,
+	0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63, 0xd2, 0xb4, 0x2d, 0x0a, 0x63, 0x6f,
+	0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x0e, 0x6d, 0x69, 0x6e, 0x53, 0x74, 0x61,
+	0x6b, 0x65, 0x64, 0x52, 0x61, 0x74, 0x69, 0x6f, 0x12, 0x72, 0x0a, 0x17, 0x61, 0x70, 0x79, 0x5f,
+	0x61, 0x74, 0x5f, 0x6d, 0x69, 0x6e, 0x5f, 0x73, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x5f, 0x72, 0x61,
+	0x74, 0x69, 0x6f, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x42, 0x3c, 0xc8, 0xde, 0x1f, 0x00, 0xda,
+	0xde, 0x1f, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x6f,
+	0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b, 0x2f,
+	0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63, 0xd2, 0xb4, 0x2d, 0x0a, 0x63, 0x6f, 0x73,
+	0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x13, 0x61, 0x70, 0x79, 0x41, 0x74, 0x4d, 0x69,
+	0x6e, 0x53, 0x74, 0x61, 0x6b, 0x65, 0x64, 0x52, 0x61, 0x74, 0x69, 0x6f, 0x12, 0x5b, 0x0a, 0x0a,
+	0x64, 0x65, 0x63, 0x61, 0x79, 0x5f, 0x72, 0x61, 0x74, 0x65, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x09,
+	0x42, 0x3c, 0xc8, 0xde, 0x1f, 0x00, 0xda, 0xde, 0x1f, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x63, 0x6f, 0x73, 0x6d,
+	0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b, 0x2f, 0x74, 0x79, 0x70, 0x65, 0x73, 0x2e, 0x44, 0x65, 0x63,
+	0xd2, 0xb4, 0x2d, 0x0a, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x44, 0x65, 0x63, 0x52, 0x09,
+	0x64, 0x65, 0x63, 0x61, 0x79, 0x52, 0x61, 0x74, 0x65, 0x3a, 0x21, 0x98, 0xa0, 0x1f, 0x00, 0x8a,
+	0xe7, 0xb0, 0x2a, 0x18, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2d, 0x73, 0x64, 0x6b, 0x2f, 0x78,
+	0x2f, 0x6d, 0x69, 0x6e, 0x74, 0x2f, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x42, 0xc4, 0x01, 0x0a,
+	0x17, 0x63, 0x6f, 0x6d, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x6d, 0x69, 0x6e, 0x74,
+	0x2e, 0x76, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x42, 0x09, 0x4d, 0x69, 0x6e, 0x74, 0x50, 0x72,
+	0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x30, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x73, 0x64, 0x6b,
+	0x2e, 0x69, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2f, 0x6d,
+	0x69, 0x6e, 0x74, 0x2f, 0x76, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x3b, 0x6d, 0x69, 0x6e, 0x74,
+	0x76, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0xa2, 0x02, 0x03, 0x43, 0x4d, 0x58, 0xaa, 0x02, 0x13,
+	0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x2e, 0x4d, 0x69, 0x6e, 0x74, 0x2e, 0x56, 0x31, 0x62, 0x65,
+	0x74, 0x61, 0x31, 0xca, 0x02, 0x13, 0x43, 0x6f, 0x73, 0x6d, 0x6f, 0x73, 0x5c, 0x4d, 0x69, 0x6e,
+	0x74, 0x5c, 0x56, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0xe2, 0x02, 0x1f, 0x43, 0x6f, 0x73, 0x6d,
+	0x6f, 0x73, 0x5c, 0x4d, 0x69, 0x6e, 0x74, 0x5c, 0x56, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x5c,
+	0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x15, 0x43, 0x6f,
+	0x73, 0x6d, 0x6f, 0x73, 0x3a, 0x3a, 0x4d, 0x69, 0x6e, 0x74, 0x3a, 0x3a, 0x56, 0x31, 0x62, 0x65,
+	0x74, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (

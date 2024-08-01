@@ -206,6 +206,7 @@ type StakingInputs struct {
 	Config        *modulev1.Module
 	AccountKeeper types.AccountKeeper
 	BankKeeper    types.BankKeeper
+	VestingKeeper types.VestingKeeper
 	Cdc           codec.Codec
 	Key           *store.KVStoreKey
 
@@ -233,6 +234,7 @@ func ProvideModule(in StakingInputs) StakingOutputs {
 		in.Key,
 		in.AccountKeeper,
 		in.BankKeeper,
+		in.VestingKeeper,
 		authority.String(),
 	)
 	m := NewAppModule(in.Cdc, k, in.AccountKeeper, in.BankKeeper, in.LegacySubspace)

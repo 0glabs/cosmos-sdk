@@ -5,6 +5,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	vestexported "github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 )
 
 // DistributionKeeper expected distribution keeper (noalias)
@@ -39,6 +40,10 @@ type BankKeeper interface {
 	DelegateCoinsFromAccountToModule(ctx sdk.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 
 	BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
+}
+
+type VestingKeeper interface {
+	IterateVestingAccounts(ctx sdk.Context, process func(vestexported.VestingAccount) (stop bool))
 }
 
 // ValidatorSet expected properties for the set of all validators (noalias)
