@@ -23,8 +23,7 @@ func Migrate(
 	legacySubspace exported.Subspace,
 	cdc codec.BinaryCodec,
 ) error {
-	var currParams types.Params
-	legacySubspace.GetParamSet(ctx, &currParams)
+	var currParams = types.DefaultParams()
 
 	if err := currParams.Validate(); err != nil {
 		return err
