@@ -4,9 +4,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/store/cachekv"
-	"github.com/cosmos/cosmos-sdk/store/wrapper"
 
 	dbm "github.com/cometbft/cometbft-db"
 	"github.com/stretchr/testify/require"
