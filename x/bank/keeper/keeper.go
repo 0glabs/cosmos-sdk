@@ -441,8 +441,9 @@ func (k BaseKeeper) MintCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 		k.setSupply(ctx, supply)
 	}
 
-	logger := k.Logger(ctx)
-	logger.Info("minted coins from module account", "amount", amounts.String(), "from", moduleName)
+	if moduleName == "mint" {
+		k.Logger(ctx).Info("minted coins from module account", "amount", amounts.String(), "from", moduleName)
+	}
 
 	// emit mint event
 	ctx.EventManager().EmitEvent(
@@ -474,9 +475,6 @@ func (k BaseKeeper) BurnCoins(ctx sdk.Context, moduleName string, amounts sdk.Co
 		supply = supply.Sub(amount)
 		k.setSupply(ctx, supply)
 	}
-
-	logger := k.Logger(ctx)
-	logger.Info("burned tokens from module account", "amount", amounts.String(), "from", moduleName)
 
 	// emit burn event
 	ctx.EventManager().EmitEvent(
