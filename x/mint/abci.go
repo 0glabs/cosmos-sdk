@@ -19,7 +19,6 @@ func decExp(x sdk.Dec) sdk.Dec {
 
 func NextInflationRate(ctx sdk.Context, params types.Params, bondedRatio sdk.Dec, circulatingRatio sdk.Dec) sdk.Dec {
 	X := bondedRatio.Quo(circulatingRatio)
-	ctx.Logger().Info("NextInflationRate", "params", params)
 	var apy sdk.Dec
 	if X.LT(params.MinStakedRatio) {
 		apy = params.ApyAtMinStakedRatio
@@ -37,14 +36,6 @@ func NextInflationRate(ctx sdk.Context, params types.Params, bondedRatio sdk.Dec
 
 	inflation := apy.Mul(bondedRatio)
 
-	ctx.Logger().Info(
-		"nextInflationRate",
-		"bondedRatio", bondedRatio,
-		"circulatingRatio", circulatingRatio,
-		"apy", apy,
-		"inflation", inflation,
-		"params", params,
-	)
 	return inflation
 }
 
