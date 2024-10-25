@@ -166,7 +166,11 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, customAppConfigTemplate s
 	opts = append(opts,
 		log.ColorOption(!serverCtx.Viper.GetBool(flags.FlagLogNoColor)),
 		// We use CometBFT flag (cmtcli.TraceFlag) for trace logging.
-		log.TraceOption(serverCtx.Viper.GetBool(FlagTrace)))
+		log.TraceOption(serverCtx.Viper.GetBool(FlagTrace)),
+		log.TimeFormatOption("01-02T15:04:05.000"),
+	)
+
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMs
 
 	// check and set filter level or keys for the logger if any
 	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
