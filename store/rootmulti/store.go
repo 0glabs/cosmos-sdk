@@ -608,9 +608,12 @@ func (rs *Store) PruneStores(pruningHeight int64) (err error) {
 
 	rs.logger.Debug("pruning store", "height", pruningHeight)
 
+	cnt := 1
+	total := len(rs.stores)
 	for key, store := range rs.stores {
-		rs.logger.Debug("pruning store", "key", key) // Also log store.name (a private variable)?
-
+		rs.logger.Debug("pruning store", "key", key.Name()) // Also log store.name (a private variable)?
+		rs.logger.Info(fmt.Sprintf("pruning for module \"%s\" to height %d. (%d/%d)", key.Name(), pruningHeight, cnt, total))
+		cnt++
 		// If the store is wrapped with an inter-block cache, we must first unwrap
 		// it to get the underlying IAVL store.
 		if store.GetStoreType() != types.StoreTypeIAVL {
