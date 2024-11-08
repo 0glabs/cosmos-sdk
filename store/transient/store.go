@@ -47,3 +47,7 @@ func (ts *Store) LastCommitID() (id types.CommitID) {
 func (ts *Store) GetStoreType() types.StoreType {
 	return types.StoreTypeTransient
 }
+
+func (ts *Store) WorkingHash() []byte {
+	return []byte{}
+}

@@ -30,6 +30,7 @@ package module
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -196,13 +197,13 @@ type HasConsensusVersion interface {
 // BeginBlockAppModule is an extension interface that contains information about the AppModule and BeginBlock.
 type BeginBlockAppModule interface {
 	AppModule
-	BeginBlock(sdk.Context, abci.RequestBeginBlock)
+	BeginBlock(sdk.Context) error
 }
 
 // EndBlockAppModule is an extension interface that contains information about the AppModule and EndBlock.
 type EndBlockAppModule interface {
 	AppModule
-	EndBlock(sdk.Context, abci.RequestEndBlock) []abci.ValidatorUpdate
+	EndBlock(sdk.Context) ([]abci.ValidatorUpdate, error)
 }
 
 // GenesisOnlyAppModule is an AppModule that only has import/export functionality
@@ -553,50 +554,69 @@ func (m Manager) RunMigrations(ctx sdk.Context, cfg Configurator, fromVM Version
 // BeginBlock performs begin block functionality for all modules. It creates a
 // child context with an event manager to aggregate events emitted from all
 // modules.
-func (m *Manager) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (m *Manager) BeginBlock(ctx sdk.Context) (sdk.BeginBlock, error) {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
-
 	for _, moduleName := range m.OrderBeginBlockers {
-		module, ok := m.Modules[moduleName].(BeginBlockAppModule)
-		if ok {
-			module.BeginBlock(ctx, req)
+		if module, ok := m.Modules[moduleName].(BeginBlockAppModule); ok {
+			if err := module.BeginBlock(ctx); err != nil {
+				return sdk.BeginBlock{}, err
+			}
 		}
 	}
 
-	return abci.ResponseBeginBlock{
+	return sdk.BeginBlock{
 		Events: ctx.EventManager().ABCIEvents(),
-	}
+	}, nil
+}
+
+// HasEndBlocker is the extension interface that modules should implement to run
+// custom logic after transaction processing in a block.
+type HasEndBlocker interface {
+	AppModule
+
+	// EndBlock is a method that will be run after transactions are processed in
+	// a block.
+	EndBlock(sdk.Context) error
 }
 
 // EndBlock performs end block functionality for all modules. It creates a
 // child context with an event manager to aggregate events emitted from all
 // modules.
-func (m *Manager) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+func (m *Manager) EndBlock(ctx sdk.Context) (sdk.EndBlock, error) {
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	validatorUpdates := []abci.ValidatorUpdate{}
 
 	for _, moduleName := range m.OrderEndBlockers {
-		module, ok := m.Modules[moduleName].(EndBlockAppModule)
-		if !ok {
+		if module, ok := m.Modules[moduleName].(HasEndBlocker); ok {
+			err := module.EndBlock(ctx)
+			if err != nil {
+				return sdk.EndBlock{}, err
+			}
+		} else if module, ok := m.Modules[moduleName].(EndBlockAppModule); ok {
+			moduleValUpdates, err := module.EndBlock(ctx)
+			if err != nil {
+				return sdk.EndBlock{}, err
+			}
+			// use these validator updates if provided, the module manager assumes
+			// only one module will update the validator set
+			if len(moduleValUpdates) > 0 {
+				if len(validatorUpdates) > 0 {
+					return sdk.EndBlock{}, errors.New("validator EndBlock updates already set by a previous module")
+				}
+
+				for _, updates := range moduleValUpdates {
+					validatorUpdates = append(validatorUpdates, abci.ValidatorUpdate{PubKey: updates.PubKey, Power: updates.Power})
+				}
+			}
+		} else {
 			continue
 		}
-		moduleValUpdates := module.EndBlock(ctx, req)
-
-		// use these validator updates if provided, the module manager assumes
-		// only one module will update the validator set
-		if len(moduleValUpdates) > 0 {
-			if len(validatorUpdates) > 0 {
-				panic("validator EndBlock updates already set by a previous module")
-			}
-
-			validatorUpdates = moduleValUpdates
-		}
 	}
 
-	return abci.ResponseEndBlock{
+	return sdk.EndBlock{
 		ValidatorUpdates: validatorUpdates,
 		Events:           ctx.EventManager().ABCIEvents(),
-	}
+	}, nil
 }
 
 // GetVersionMap gets consensus version from all modules

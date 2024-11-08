@@ -52,6 +52,8 @@ type ToRosettaConverter interface {
 	// BlockResponse returns a block response given a result block
 	BlockResponse(block *tmcoretypes.ResultBlock) crgtypes.BlockResponse
 	// BeginBlockToTx converts the given begin block hash to rosetta transaction hash
+	FinalizeBlockTxHash(blockHash []byte) string
+	// BeginBlockToTx converts the given begin block hash to rosetta transaction hash
 	BeginBlockTxHash(blockHash []byte) string
 	// EndBlockTxHash converts the given endblock hash to rosetta transaction hash
 	EndBlockTxHash(blockHash []byte) string
@@ -68,7 +70,7 @@ type ToRosettaConverter interface {
 	// SigningComponents returns rosetta's components required to build a signable transaction
 	SigningComponents(tx authsigning.Tx, metadata *ConstructionMetadata, rosPubKeys []*rosettatypes.PublicKey) (txBytes []byte, payloadsToSign []*rosettatypes.SigningPayload, err error)
 	// Tx converts a tendermint transaction and tx result if provided to a rosetta tx
-	Tx(rawTx tmtypes.Tx, txResult *abci.ResponseDeliverTx) (*rosettatypes.Transaction, error)
+	Tx(rawTx tmtypes.Tx, txResult *abci.ExecTxResult) (*rosettatypes.Transaction, error)
 	// TxIdentifiers converts a tendermint tx to transaction identifiers
 	TxIdentifiers(txs []tmtypes.Tx) []*rosettatypes.TransactionIdentifier
 	// BalanceOps converts events to balance operations
@@ -259,7 +261,7 @@ func (c converter) Ops(status string, msg sdk.Msg) ([]*rosettatypes.Operation, e
 }
 
 // Tx converts a tendermint raw transaction and its result (if provided) to a rosetta transaction
-func (c converter) Tx(rawTx tmtypes.Tx, txResult *abci.ResponseDeliverTx) (*rosettatypes.Transaction, error) {
+func (c converter) Tx(rawTx tmtypes.Tx, txResult *abci.ExecTxResult) (*rosettatypes.Transaction, error) {
 	// decode tx
 	tx, err := c.txDecode(rawTx)
 	if err != nil {
@@ -765,4 +767,12 @@ func (c converter) SignerData(anyAccount *codectypes.Any) (*SignerData, error) {
 		AccountNumber: acc.GetAccountNumber(),
 		Sequence:      acc.GetSequence(),
 	}, nil
+}
+
+// FinalizeBlockTxHash produces a mock beginblock hash that rosetta can query
+// for finalizeBlock operations, it also serves the purpose of representing
+// part of the state changes happening at finalizeblock level (balance ones)
+func (c converter) FinalizeBlockTxHash(hash []byte) string {
+	final := append([]byte{FinalizeBlockHashStart}, hash...)
+	return fmt.Sprintf("%X", final)
 }

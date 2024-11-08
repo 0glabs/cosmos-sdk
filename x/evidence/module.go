@@ -165,8 +165,9 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 func (AppModule) ConsensusVersion() uint64 { return 1 }
 
 // BeginBlock executes all ABCI BeginBlock logic respective to the evidence module.
-func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
-	BeginBlocker(ctx, req, am.keeper)
+func (am AppModule) BeginBlock(ctx sdk.Context) error {
+	BeginBlocker(ctx, am.keeper)
+	return nil
 }
 
 // AppModuleSimulation functions

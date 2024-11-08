@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -16,6 +17,8 @@ import (
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 
+	coreheader "cosmossdk.io/core/header"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
@@ -58,14 +61,14 @@ func (app *BaseApp) InitChain(req abci.RequestInitChain) (res abci.ResponseInitC
 	}
 
 	// initialize states with a correct header
-	app.setState(runTxModeDeliver, initHeader)
+	app.setState(execModeFinalize, initHeader)
 	app.setState(runTxModeCheck, initHeader)
 
 	// Store the consensus params in the BaseApp's paramstore. Note, this must be
 	// done after the deliver state and context have been set as it's persisted
 	// to state.
 	if req.ConsensusParams != nil {
-		app.StoreConsensusParams(app.deliverState.ctx, req.ConsensusParams)
+		app.StoreConsensusParams(app.finalizeBlockState.ctx, req.ConsensusParams)
 	}
 
 	if app.initChainer == nil {
@@ -73,9 +76,9 @@ func (app *BaseApp) InitChain(req abci.RequestInitChain) (res abci.ResponseInitC
 	}
 
 	// add block gas meter for any genesis transactions (allow infinite gas)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
+	app.finalizeBlockState.ctx = app.finalizeBlockState.ctx.WithBlockGasMeter(sdk.NewInfiniteGasMeter())
 
-	res = app.initChainer(app.deliverState.ctx, req)
+	res = app.initChainer(app.finalizeBlockState.ctx, req)
 
 	// sanity check
 	if len(req.Validators) > 0 {
@@ -148,94 +151,6 @@ func (app *BaseApp) FilterPeerByID(info string) abci.ResponseQuery {
 	}
 
 	return abci.ResponseQuery{}
-}
-
-// BeginBlock implements the ABCI application interface.
-func (app *BaseApp) BeginBlock(req abci.RequestBeginBlock) (res abci.ResponseBeginBlock) {
-	if req.Header.ChainID != app.chainID {
-		panic(fmt.Sprintf("invalid chain-id on BeginBlock; expected: %s, got: %s", app.chainID, req.Header.ChainID))
-	}
-
-	if app.cms.TracingEnabled() {
-		app.cms.SetTracingContext(sdk.TraceContext(
-			map[string]interface{}{"blockHeight": req.Header.Height},
-		))
-	}
-
-	if err := app.validateHeight(req); err != nil {
-		panic(err)
-	}
-
-	// Initialize the DeliverTx state. If this is the first block, it should
-	// already be initialized in InitChain. Otherwise app.deliverState will be
-	// nil, since it is reset on Commit.
-	if app.deliverState == nil {
-		app.setState(runTxModeDeliver, req.Header)
-	} else {
-		// In the first block, app.deliverState.ctx will already be initialized
-		// by InitChain. Context is now updated with Header information.
-		app.deliverState.ctx = app.deliverState.ctx.
-			WithBlockHeader(req.Header).
-			WithBlockHeight(req.Header.Height)
-	}
-
-	gasMeter := app.getBlockGasMeter(app.deliverState.ctx)
-
-	app.deliverState.ctx = app.deliverState.ctx.
-		WithBlockGasMeter(gasMeter).
-		WithHeaderHash(req.Hash).
-		WithConsensusParams(app.GetConsensusParams(app.deliverState.ctx))
-
-	if app.checkState != nil {
-		app.checkState.ctx = app.checkState.ctx.
-			WithBlockGasMeter(gasMeter).
-			WithHeaderHash(req.Hash)
-	}
-
-	if app.beginBlocker != nil {
-		res = app.beginBlocker(app.deliverState.ctx, req)
-		res.Events = sdk.MarkEventsToIndex(res.Events, app.indexEvents)
-	}
-	// set the signed validators for addition to context in deliverTx
-	app.voteInfos = req.LastCommitInfo.GetVotes()
-
-	// call the hooks with the BeginBlock messages
-	for _, streamingListener := range app.abciListeners {
-		if err := streamingListener.ListenBeginBlock(app.deliverState.ctx, req, res); err != nil {
-			panic(fmt.Errorf("BeginBlock listening hook failed, height: %d, err: %w", req.Header.Height, err))
-		}
-	}
-
-	// Reset the gas meter so that the AnteHandlers aren't required to
-	gasMeter = app.getBlockGasMeter(app.deliverState.ctx)
-	app.deliverState.ctx = app.deliverState.ctx.WithBlockGasMeter(gasMeter)
-
-	return res
-}
-
-// EndBlock implements the ABCI interface.
-func (app *BaseApp) EndBlock(req abci.RequestEndBlock) (res abci.ResponseEndBlock) {
-	if app.deliverState.ms.TracingEnabled() {
-		app.deliverState.ms = app.deliverState.ms.SetTracingContext(nil).(sdk.CacheMultiStore)
-	}
-
-	if app.endBlocker != nil {
-		res = app.endBlocker(app.deliverState.ctx, req)
-		res.Events = sdk.MarkEventsToIndex(res.Events, app.indexEvents)
-	}
-
-	if cp := app.GetConsensusParams(app.deliverState.ctx); cp != nil {
-		res.ConsensusParamUpdates = cp
-	}
-
-	// call the streaming service hooks with the EndBlock messages
-	for _, streamingListener := range app.abciListeners {
-		if err := streamingListener.ListenEndBlock(app.deliverState.ctx, req, res); err != nil {
-			panic(fmt.Errorf("EndBlock listening hook failed, height: %d, err: %w", req.Height, err))
-		}
-	}
-
-	return res
 }
 
 // PrepareProposal implements the PrepareProposal ABCI method and returns a
@@ -371,7 +286,7 @@ func (app *BaseApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		panic(fmt.Sprintf("unknown RequestCheckTx type: %s", req.Type))
 	}
 
-	gInfo, result, anteEvents, priority, err := app.runTx(mode, req.Tx)
+	gInfo, result, anteEvents, err := app.runTx(mode, req.Tx)
 	if err != nil {
 		return sdkerrors.ResponseCheckTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
 	}
@@ -382,7 +297,6 @@ func (app *BaseApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 		Log:       result.Log,
 		Data:      result.Data,
 		Events:    sdk.MarkEventsToIndex(result.Events, app.indexEvents),
-		Priority:  priority,
 	}
 }
 
@@ -397,7 +311,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 
 	defer func() {
 		for _, streamingListener := range app.abciListeners {
-			if err := streamingListener.ListenDeliverTx(app.deliverState.ctx, req, res); err != nil {
+			if err := streamingListener.ListenDeliverTx(app.finalizeBlockState.ctx, req, res); err != nil {
 				panic(fmt.Errorf("DeliverTx listening hook failed: %w", err))
 			}
 		}
@@ -410,7 +324,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 		telemetry.SetGauge(float32(gInfo.GasWanted), "tx", "gas", "wanted")
 	}()
 
-	gInfo, result, anteEvents, _, err := app.runTx(runTxModeDeliver, req.Tx)
+	gInfo, result, anteEvents, err := app.runTx(execModeFinalize, req.Tx)
 	if err != nil {
 		resultStr = "failed"
 		return sdkerrors.ResponseDeliverTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, sdk.MarkEventsToIndex(anteEvents, app.indexEvents), app.trace)
@@ -433,7 +347,7 @@ func (app *BaseApp) DeliverTx(req abci.RequestDeliverTx) (res abci.ResponseDeliv
 // against that height and gracefully halt if it matches the latest committed
 // height.
 func (app *BaseApp) Commit() abci.ResponseCommit {
-	header := app.deliverState.ctx.BlockHeader()
+	header := app.finalizeBlockState.Context().BlockHeader()
 	retainHeight := app.GetBlockRetentionHeight(header.Height)
 
 	rms, ok := app.cms.(*rootmulti.Store)
@@ -441,56 +355,24 @@ func (app *BaseApp) Commit() abci.ResponseCommit {
 		rms.SetCommitHeader(header)
 	}
 
-	// Write the DeliverTx state into branched storage and commit the MultiStore.
-	// The write to the DeliverTx state writes all state transitions to the root
-	// MultiStore (app.cms) so when Commit() is called is persists those values.
-	app.deliverState.ms.Write()
-	commitID := app.cms.Commit()
+	app.cms.Commit()
 
-	res := abci.ResponseCommit{
-		Data:         commitID.Hash,
+	resp := abci.ResponseCommit{
 		RetainHeight: retainHeight,
 	}
 
-	// call the hooks with the Commit message
-	for _, streamingListener := range app.abciListeners {
-		if err := streamingListener.ListenCommit(app.deliverState.ctx, res); err != nil {
-			panic(fmt.Errorf("Commit listening hook failed, height: %d, err: %w", header.Height, err))
-		}
-	}
-
-	app.logger.Info("commit synced", "commit", fmt.Sprintf("%X", commitID))
-
-	// Reset the Check state to the latest committed.
+	// Reset the CheckTx state to the latest committed.
 	//
-	// NOTE: This is safe because Tendermint holds a lock on the mempool for
+	// NOTE: This is safe because CometBFT holds a lock on the mempool for
 	// Commit. Use the header from this latest block.
 	app.setState(runTxModeCheck, header)
 
-	// empty/reset the deliver state
-	app.deliverState = nil
+	app.finalizeBlockState = nil
 
-	var halt bool
+	// The SnapshotIfApplicable method will create the snapshot by starting the goroutine
+	app.snapshotManager.SnapshotIfApplicable(header.Height)
 
-	switch {
-	case app.haltHeight > 0 && uint64(header.Height) >= app.haltHeight:
-		halt = true
-
-	case app.haltTime > 0 && header.Time.Unix() >= int64(app.haltTime):
-		halt = true
-	}
-
-	if halt {
-		// Halt the binary and allow Tendermint to receive the ResponseCommit
-		// response with the commit ID hash. This will allow the node to successfully
-		// restart and process blocks assuming the halt configuration has been
-		// reset or moved to a more distant value.
-		app.halt()
-	}
-
-	go app.snapshotManager.SnapshotIfApplicable(header.Height)
-
-	return res
+	return resp
 }
 
 // halt attempts to gracefully shutdown the node via SIGINT and SIGTERM falling
@@ -852,7 +734,7 @@ func (app *BaseApp) GetBlockRetentionHeight(commitHeight int64) int64 {
 	// evidence parameters instead of computing an estimated nubmer of blocks based
 	// on the unbonding period and block commitment time as the two should be
 	// equivalent.
-	cp := app.GetConsensusParams(app.deliverState.ctx)
+	cp := app.GetConsensusParams(app.finalizeBlockState.ctx)
 	if cp != nil && cp.Evidence != nil && cp.Evidence.MaxAgeNumBlocks > 0 {
 		retentionHeight = commitHeight - cp.Evidence.MaxAgeNumBlocks
 	}
@@ -992,7 +874,7 @@ func SplitABCIQueryPath(requestPath string) (path []string) {
 // any state changes made in InitChain.
 func (app *BaseApp) getContextForProposal(ctx sdk.Context, height int64) sdk.Context {
 	if height == app.initialHeight {
-		ctx, _ = app.deliverState.ctx.CacheContext()
+		ctx, _ = app.finalizeBlockState.ctx.CacheContext()
 
 		// clear all context data set during InitChain to avoid inconsistent behavior
 		ctx = ctx.WithBlockHeader(tmproto.Header{})
@@ -1000,4 +882,268 @@ func (app *BaseApp) getContextForProposal(ctx sdk.Context, height int64) sdk.Con
 	}
 
 	return ctx
+}
+
+// workingHash gets the apphash that will be finalized in commit.
+// These writes will be persisted to the root multi-store (app.cms) and flushed to
+// disk in the Commit phase. This means when the ABCI client requests Commit(), the application
+// state transitions will be flushed to disk and as a result, but we already have
+// an application Merkle root.
+func (app *BaseApp) workingHash() []byte {
+	// Write the FinalizeBlock state into branched storage and commit the MultiStore.
+	// The write to the FinalizeBlock state writes all state transitions to the root
+	// MultiStore (app.cms) so when Commit() is called it persists those values.
+	app.finalizeBlockState.ms.Write()
+
+	// Get the hash of all writes in order to return the apphash to the comet in finalizeBlock.
+	commitHash := app.cms.WorkingHash()
+	app.logger.Debug("hash of all writes", "workingHash", fmt.Sprintf("%X", commitHash))
+
+	return commitHash
+}
+
+// checkHalt checkes if height or time exceeds halt-height or halt-time respectively.
+func (app *BaseApp) checkHalt(height int64, time time.Time) error {
+	var halt bool
+	switch {
+	case app.haltHeight > 0 && uint64(height) > app.haltHeight:
+		halt = true
+
+	case app.haltTime > 0 && time.Unix() > int64(app.haltTime):
+		halt = true
+	}
+
+	if halt {
+		return fmt.Errorf("halt per configuration height %d time %d", app.haltHeight, app.haltTime)
+	}
+
+	return nil
+}
+
+func (app *BaseApp) validateFinalizeBlockHeight(req *abci.RequestFinalizeBlock) error {
+	if req.Height < 1 {
+		return fmt.Errorf("invalid height: %d", req.Height)
+	}
+
+	lastBlockHeight := app.LastBlockHeight()
+
+	// expectedHeight holds the expected height to validate
+	var expectedHeight int64
+	if lastBlockHeight == 0 && app.initialHeight > 1 {
+		// In this case, we're validating the first block of the chain, i.e no
+		// previous commit. The height we're expecting is the initial height.
+		expectedHeight = app.initialHeight
+	} else {
+		// This case can mean two things:
+		//
+		// - Either there was already a previous commit in the store, in which
+		// case we increment the version from there.
+		// - Or there was no previous commit, in which case we start at version 1.
+		expectedHeight = lastBlockHeight + 1
+	}
+
+	if req.Height != expectedHeight {
+		return fmt.Errorf("invalid height: %d; expected: %d", req.Height, expectedHeight)
+	}
+
+	return nil
+}
+
+// internalFinalizeBlock executes the block, called by the Optimistic
+// Execution flow or by the FinalizeBlock ABCI method. The context received is
+// only used to handle early cancellation, for anything related to state app.finalizeBlockState.Context()
+// must be used.
+func (app *BaseApp) internalFinalizeBlock(ctx context.Context, req *abci.RequestFinalizeBlock) (*abci.ResponseFinalizeBlock, error) {
+	var events []abci.Event
+
+	if err := app.checkHalt(req.Height, req.Time); err != nil {
+		return nil, err
+	}
+
+	if err := app.validateFinalizeBlockHeight(req); err != nil {
+		return nil, err
+	}
+
+	header := cmtproto.Header{
+		ChainID:            app.chainID,
+		Height:             req.Height,
+		Time:               req.Time,
+		ProposerAddress:    req.ProposerAddress,
+		NextValidatorsHash: req.NextValidatorsHash,
+		AppHash:            app.LastCommitID().Hash,
+	}
+
+	// finalizeBlockState should be set on InitChain or ProcessProposal. If it is
+	// nil, it means we are replaying this block and we need to set the state here
+	// given that during block replay ProcessProposal is not executed by CometBFT.
+	if app.finalizeBlockState == nil {
+		app.setState(execModeFinalize, header)
+	}
+
+	// Context is now updated with Header information.
+	app.finalizeBlockState.SetContext(app.finalizeBlockState.Context().
+		WithBlockHeader(header).
+		WithHeaderHash(req.Hash).
+		WithHeaderInfo(coreheader.Info{
+			ChainID: app.chainID,
+			Height:  req.Height,
+			Time:    req.Time,
+			Hash:    req.Hash,
+			AppHash: app.LastCommitID().Hash,
+		}).
+		WithConsensusParams(app.GetConsensusParams(app.finalizeBlockState.Context())).
+		WithVoteInfos(req.DecidedLastCommit.Votes).
+		WithExecMode(sdk.ExecModeFinalize).
+		WithCometInfo(cometInfo{
+			Misbehavior:     req.Misbehavior,
+			ValidatorsHash:  req.NextValidatorsHash,
+			ProposerAddress: req.ProposerAddress,
+			LastCommit:      req.DecidedLastCommit,
+		}))
+
+	// GasMeter must be set after we get a context with updated consensus params.
+	gasMeter := app.getBlockGasMeter(app.finalizeBlockState.Context())
+	app.finalizeBlockState.SetContext(app.finalizeBlockState.Context().WithBlockGasMeter(gasMeter))
+
+	if app.checkState != nil {
+		app.checkState.SetContext(app.checkState.Context().
+			WithBlockGasMeter(gasMeter).
+			WithHeaderHash(req.Hash))
+	}
+
+	preblockEvents, err := app.preBlock(req)
+	if err != nil {
+		return nil, err
+	}
+
+	events = append(events, preblockEvents...)
+
+	beginBlock, err := app.beginBlock(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// First check for an abort signal after beginBlock, as it's the first place
+	// we spend any significant amount of time.
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		// continue
+	}
+
+	events = append(events, beginBlock.Events...)
+
+	// Reset the gas meter so that the AnteHandlers aren't required to
+	gasMeter = app.getBlockGasMeter(app.finalizeBlockState.Context())
+	app.finalizeBlockState.SetContext(app.finalizeBlockState.Context().WithBlockGasMeter(gasMeter))
+
+	// Iterate over all raw transactions in the proposal and attempt to execute
+	// them, gathering the execution results.
+	//
+	// NOTE: Not all raw transactions may adhere to the sdk.Tx interface, e.g.
+	// vote extensions, so skip those.
+	txResults := make([]*abci.ExecTxResult, 0, len(req.Txs))
+	app.logger.Info("executing transactions", "numTxs", len(req.Txs))
+	for _, rawTx := range req.Txs {
+		var response *abci.ExecTxResult
+
+		if _, err := app.txDecoder(rawTx); err == nil {
+			response = app.deliverTx(rawTx)
+		} else {
+			// In the case where a transaction included in a block proposal is malformed,
+			// we still want to return a default response to comet. This is because comet
+			// expects a response for each transaction included in a block proposal.
+			response = sdkerrors.ResponseExecTxResultWithEvents(
+				sdkerrors.ErrTxDecode,
+				0,
+				0,
+				nil,
+				false,
+			)
+		}
+
+		// check after every tx if we should abort
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// continue
+		}
+
+		txResults = append(txResults, response)
+	}
+	app.logger.Info("executed transactions", "numTxs", len(req.Txs))
+
+	endBlock, err := app.endBlock(app.finalizeBlockState.Context())
+	if err != nil {
+		return nil, err
+	}
+
+	// check after endBlock if we should abort, to avoid propagating the result
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		// continue
+	}
+
+	events = append(events, endBlock.Events...)
+	cp := app.GetConsensusParams(app.finalizeBlockState.Context())
+
+	return &abci.ResponseFinalizeBlock{
+		Events:                events,
+		TxResults:             txResults,
+		ValidatorUpdates:      endBlock.ValidatorUpdates,
+		ConsensusParamUpdates: cp,
+	}, nil
+}
+
+// FinalizeBlock will execute the block proposal provided by RequestFinalizeBlock.
+// Specifically, it will execute an application's BeginBlock (if defined), followed
+// by the transactions in the proposal, finally followed by the application's
+// EndBlock (if defined).
+//
+// For each raw transaction, i.e. a byte slice, BaseApp will only execute it if
+// it adheres to the sdk.Tx interface. Otherwise, the raw transaction will be
+// skipped. This is to support compatibility with proposers injecting vote
+// extensions into the proposal, which should not themselves be executed in cases
+// where they adhere to the sdk.Tx interface.
+func (app *BaseApp) FinalizeBlock(req *abci.RequestFinalizeBlock) (res *abci.ResponseFinalizeBlock, err error) {
+	defer func() {
+		// call the streaming service hooks with the FinalizeBlock messages
+		for _, streamingListener := range app.abciListeners {
+			if err := streamingListener.ListenFinalizeBlock(app.finalizeBlockState.Context(), *req, *res); err != nil {
+				app.logger.Error("ListenFinalizeBlock listening hook failed", "height", req.Height, "err", err)
+			}
+		}
+	}()
+
+	if app.optimisticExec.Initialized() {
+		// check if the hash we got is the same as the one we are executing
+		aborted := app.optimisticExec.AbortIfNeeded(req.Hash)
+		// Wait for the OE to finish, regardless of whether it was aborted or not
+		res, err = app.optimisticExec.WaitResult()
+
+		// only return if we are not aborting
+		if !aborted {
+			if res != nil {
+				res.AppHash = app.workingHash()
+			}
+
+			return res, err
+		}
+
+		// if it was aborted, we need to reset the state
+		app.finalizeBlockState = nil
+		app.optimisticExec.Reset()
+	}
+
+	// if no OE is running, just run the block (this is either a block replay or a OE that got aborted)
+	res, err = app.internalFinalizeBlock(context.Background(), req)
+	if res != nil {
+		res.AppHash = app.workingHash()
+	}
+
+	return res, err
 }

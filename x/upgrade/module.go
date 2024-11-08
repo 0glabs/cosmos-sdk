@@ -157,8 +157,9 @@ func (AppModule) ConsensusVersion() uint64 { return consensusVersion }
 // BeginBlock calls the upgrade module hooks
 //
 // CONTRACT: this is registered in BeginBlocker *before* all other modules' BeginBlock functions
-func (am AppModule) BeginBlock(ctx sdk.Context, req abci.RequestBeginBlock) {
-	BeginBlocker(am.keeper, ctx, req)
+func (am AppModule) BeginBlock(ctx sdk.Context) error {
+	BeginBlocker(am.keeper, ctx)
+	return nil
 }
 
 //

@@ -166,7 +166,6 @@ func SimulateFromSeed(
 
 		// Run the BeginBlock handler
 		logWriter.AddEntry(BeginBlockEntry(int64(height)))
-		app.BeginBlock(request)
 
 		ctx := app.NewContext(false, header)
 
@@ -189,7 +188,6 @@ func SimulateFromSeed(
 		operations := blockSimulator(r, app, ctx, accs, header)
 		opCount += operations + numQueuedOpsRan + numQueuedTimeOpsRan
 
-		res := app.EndBlock(abci.RequestEndBlock{})
 		header.Height++
 		header.Time = header.Time.Add(
 			time.Duration(minTimePerBlock) * time.Second)
@@ -216,7 +214,6 @@ func SimulateFromSeed(
 		// Update the validator set, which will be reflected in the application
 		// on the next block
 		validators = nextValidators
-		nextValidators = updateValidators(tb, r, params, validators, res.ValidatorUpdates, eventStats.Tally)
 
 		// update the exported params
 		if config.ExportParamsPath != "" && config.ExportParamsHeight == height {

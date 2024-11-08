@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	types2 "github.com/cometbft/cometbft/abci/types"
 	"github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/stretchr/testify/require"
 
@@ -114,7 +113,6 @@ func SignCheckDeliver(
 	}
 
 	// Simulate a sending a transaction and committing a block
-	app.BeginBlock(types2.RequestBeginBlock{Header: header})
 	gInfo, res, err := app.SimDeliver(txCfg.TxEncoder(), tx)
 
 	if expPass {
@@ -125,7 +123,6 @@ func SignCheckDeliver(
 		require.Nil(t, res)
 	}
 
-	app.EndBlock(types2.RequestEndBlock{})
 	app.Commit()
 
 	return gInfo, res, err

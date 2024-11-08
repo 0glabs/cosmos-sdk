@@ -130,6 +130,10 @@ func (fss *StreamingService) ListenEndBlock(ctx context.Context, req abci.Reques
 	return nil
 }
 
+func (a *StreamingService) ListenFinalizeBlock(ctx context.Context, req abci.RequestFinalizeBlock, res abci.ResponseFinalizeBlock) error {
+	return nil
+}
+
 // ListenCommit satisfies the ABCIListener interface. It is executed during the
 // ABCI Commit request and is responsible for writing all staged data to files.
 // It will only return a non-nil error when stopNodeOnErr is set.

@@ -108,15 +108,12 @@ func SetupAtGenesis(appConfig depinject.Config, extraOutputs ...interface{}) (*r
 
 // NextBlock starts a new block.
 func NextBlock(app *runtime.App, ctx sdk.Context, jumpTime time.Duration) sdk.Context {
-	app.EndBlock(abci.RequestEndBlock{Height: ctx.BlockHeight()})
 
 	app.Commit()
 
 	newBlockTime := ctx.BlockTime().Add(jumpTime)
 	nextHeight := ctx.BlockHeight() + 1
 	newHeader := tmproto.Header{Height: nextHeight, Time: newBlockTime}
-
-	app.BeginBlock(abci.RequestBeginBlock{Header: newHeader})
 
 	return app.NewUncachedContext(false, newHeader)
 }
@@ -186,12 +183,6 @@ func SetupWithConfiguration(appConfig depinject.Config, startupConfig StartupCon
 	// commit genesis changes
 	if !startupConfig.AtGenesis {
 		app.Commit()
-		app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{
-			Height:             app.LastBlockHeight() + 1,
-			AppHash:            app.LastCommitID().Hash,
-			ValidatorsHash:     valSet.Hash(),
-			NextValidatorsHash: valSet.Hash(),
-		}})
 	}
 
 	return app, nil

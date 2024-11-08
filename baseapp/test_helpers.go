@@ -16,13 +16,13 @@ func (app *BaseApp) SimCheck(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo, *
 	if err != nil {
 		return sdk.GasInfo{}, nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "%s", err)
 	}
-	gasInfo, result, _, _, err := app.runTx(runTxModeCheck, bz)
+	gasInfo, result, _, err := app.runTx(runTxModeCheck, bz)
 	return gasInfo, result, err
 }
 
 // Simulate executes a tx in simulate mode to get result and gas info.
 func (app *BaseApp) Simulate(txBytes []byte) (sdk.GasInfo, *sdk.Result, error) {
-	gasInfo, result, _, _, err := app.runTx(runTxModeSimulate, txBytes)
+	gasInfo, result, _, err := app.runTx(runTxModeSimulate, txBytes)
 	return gasInfo, result, err
 }
 
@@ -32,7 +32,7 @@ func (app *BaseApp) SimDeliver(txEncoder sdk.TxEncoder, tx sdk.Tx) (sdk.GasInfo,
 	if err != nil {
 		return sdk.GasInfo{}, nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "%s", err)
 	}
-	gasInfo, result, _, _, err := app.runTx(runTxModeDeliver, bz)
+	gasInfo, result, _, err := app.runTx(execModeFinalize, bz)
 	return gasInfo, result, err
 }
 
@@ -43,7 +43,7 @@ func (app *BaseApp) NewContext(isCheckTx bool, header tmproto.Header) sdk.Contex
 			WithMinGasPrices(app.minGasPrices)
 	}
 
-	return sdk.NewContext(app.deliverState.ms, header, false, app.logger)
+	return sdk.NewContext(app.finalizeBlockState.ms, header, false, app.logger)
 }
 
 func (app *BaseApp) NewUncachedContext(isCheckTx bool, header tmproto.Header) sdk.Context {
@@ -51,5 +51,5 @@ func (app *BaseApp) NewUncachedContext(isCheckTx bool, header tmproto.Header) sd
 }
 
 func (app *BaseApp) GetContextForDeliverTx(txBytes []byte) sdk.Context {
-	return app.getContextForTx(runTxModeDeliver, txBytes)
+	return app.getContextForTx(execModeFinalize, txBytes)
 }
