@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"cosmossdk.io/core/comet"
+	"cosmossdk.io/core/header"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmbytes "github.com/cometbft/cometbft/libs/bytes"
 	"github.com/cometbft/cometbft/libs/log"
@@ -12,6 +14,21 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/gaskv"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+)
+
+// ExecMode defines the execution mode which can be set on a Context.
+type ExecMode uint8
+
+// All possible execution modes.
+const (
+	ExecModeCheck ExecMode = iota
+	ExecModeReCheck
+	ExecModeSimulate
+	ExecModePrepareProposal
+	ExecModeProcessProposal
+	ExecModeVoteExtension
+	ExecModeVerifyVoteExtension
+	ExecModeFinalize
 )
 
 /*
@@ -41,6 +58,9 @@ type Context struct {
 	priority             int64 // The tx priority, only relevant in CheckTx
 	kvGasConfig          storetypes.GasConfig
 	transientKVGasConfig storetypes.GasConfig
+	headerInfo           header.Info
+	execMode             ExecMode
+	cometInfo            comet.BlockInfo
 }
 
 // Proposed rename, not done to avoid API breakage
@@ -327,4 +347,24 @@ func UnwrapSDKContext(ctx context.Context) Context {
 		return sdkCtx
 	}
 	return ctx.Value(SdkContextKey).(Context)
+}
+
+// WithHeaderInfo returns a Context with an updated header info
+func (c Context) WithHeaderInfo(headerInfo header.Info) Context {
+	// Settime to UTC
+	headerInfo.Time = headerInfo.Time.UTC()
+	c.headerInfo = headerInfo
+	return c
+}
+
+// WithExecMode returns a Context with an updated ExecMode.
+func (c Context) WithExecMode(m ExecMode) Context {
+	c.execMode = m
+	return c
+}
+
+// WithCometInfo returns a Context with an updated comet info
+func (c Context) WithCometInfo(cometInfo comet.BlockInfo) Context {
+	c.cometInfo = cometInfo
+	return c
 }

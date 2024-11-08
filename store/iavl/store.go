@@ -407,3 +407,8 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 	op := types.NewIavlCommitmentOp(key, commitmentProof)
 	return &tmcrypto.ProofOps{Ops: []tmcrypto.ProofOp{op.ProofOp()}}
 }
+
+// WorkingHash returns the hash of the current working tree.
+func (st *Store) WorkingHash() []byte {
+	return st.tree.WorkingHash()
+}

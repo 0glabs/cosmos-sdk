@@ -17,10 +17,11 @@ const (
 // which are not represented as transactions we mock only the balance changes
 // happening at those levels as transactions. (check BeginBlockTxHash for more info)
 const (
-	DeliverTxSize       = sha256.Size
-	BeginEndBlockTxSize = DeliverTxSize + 1
-	EndBlockHashStart   = 0x0
-	BeginBlockHashStart = 0x1
+	DeliverTxSize          = sha256.Size
+	BeginEndBlockTxSize    = DeliverTxSize + 1
+	EndBlockHashStart      = 0x0
+	BeginBlockHashStart    = 0x1
+	FinalizeBlockHashStart = 0x1
 )
 
 const (

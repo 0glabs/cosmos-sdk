@@ -1,6 +1,7 @@
 package errors
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
 )
 
@@ -40,5 +41,19 @@ func QueryResult(err error, debug bool) abci.ResponseQuery {
 		Codespace: space,
 		Code:      code,
 		Log:       log,
+	}
+}
+
+// ResponseExecTxResultWithEvents returns an ABCI ExecTxResult object with fields
+// filled in from the given error, gas values and events.
+func ResponseExecTxResultWithEvents(err error, gw, gu uint64, events []abci.Event, debug bool) *abci.ExecTxResult {
+	space, code, log := errorsmod.ABCIInfo(err, debug)
+	return &abci.ExecTxResult{
+		Codespace: space,
+		Code:      code,
+		Log:       log,
+		GasWanted: int64(gw),
+		GasUsed:   int64(gu),
+		Events:    events,
 	}
 }
