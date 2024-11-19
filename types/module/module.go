@@ -572,8 +572,6 @@ func (m *Manager) BeginBlock(ctx sdk.Context) (sdk.BeginBlock, error) {
 // HasEndBlocker is the extension interface that modules should implement to run
 // custom logic after transaction processing in a block.
 type HasEndBlocker interface {
-	AppModule
-
 	// EndBlock is a method that will be run after transactions are processed in
 	// a block.
 	EndBlock(sdk.Context) error
