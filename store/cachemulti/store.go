@@ -3,6 +3,7 @@ package cachemulti
 import (
 	"fmt"
 	"io"
+	"maps"
 
 	dbm "github.com/cometbft/cometbft-db"
 
@@ -167,4 +168,23 @@ func (cms Store) GetKVStore(key types.StoreKey) types.KVStore {
 		panic(fmt.Sprintf("kv store with key %v has not been registered in stores", key))
 	}
 	return store.(types.KVStore)
+}
+
+// Copy creates a deep copy of the Store object
+func (cms Store) Copy() types.CacheMultiStore {
+	// new stores
+	newStores := make(map[types.StoreKey]types.CacheWrap, len(cms.stores))
+	for key, store := range cms.stores {
+		if cacheStore, ok := store.(*cachekv.Store); ok {
+			newStores[key] = cacheStore.Copy()
+		}
+	}
+
+	return Store{
+		db:           cms.db.(*cachekv.Store).Copy(),
+		stores:       newStores,
+		keys:         maps.Clone(cms.keys),
+		traceWriter:  cms.traceWriter,
+		traceContext: cms.traceContext,
+	}
 }

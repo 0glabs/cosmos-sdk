@@ -388,3 +388,29 @@ func (store *Store) setCacheValue(key, value []byte, dirty bool) {
 		store.unsortedCache[keyStr] = struct{}{}
 	}
 }
+
+// Copy branches a new cache kv store with same parent and caches
+func (store *Store) Copy() *Store {
+	store.mtx.Lock()
+	defer store.mtx.Unlock()
+
+	// new cache
+	newCache := make(map[string]*cValue, len(store.cache))
+	for k, v := range store.cache {
+		tmp := *v // copy to a new struct
+		newCache[k] = &tmp
+	}
+
+	// new unsorted cache
+	newUnsortedCache := make(map[string]struct{}, len(store.unsortedCache))
+	for key := range store.unsortedCache {
+		newUnsortedCache[key] = struct{}{}
+	}
+
+	return &Store{
+		cache:         newCache,
+		unsortedCache: newUnsortedCache,
+		sortedCache:   store.sortedCache.Copy(),
+		parent:        store.parent,
+	}
+}
