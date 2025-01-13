@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"fmt"
-
 	"cosmossdk.io/math"
 	"github.com/cometbft/cometbft/libs/log"
 
@@ -19,40 +17,29 @@ type Keeper struct {
 	stakingKeeper    types.StakingKeeper
 	bankKeeper       types.BankKeeper
 	feeCollectorName string
-
-	// the address capable of executing a MsgUpdateParams message. Typically, this
-	// should be the x/gov module account.
-	authority string
 }
 
-// NewKeeper creates a new mint Keeper instance
+// NewKeeper creates a new mint Keeper instance.
 func NewKeeper(
 	cdc codec.BinaryCodec,
-	key storetypes.StoreKey,
-	sk types.StakingKeeper,
+	storeKey storetypes.StoreKey,
+	stakingKeeper types.StakingKeeper,
 	ak types.AccountKeeper,
-	bk types.BankKeeper,
+	bankKeeper types.BankKeeper,
 	feeCollectorName string,
-	authority string,
 ) Keeper {
-	// ensure mint module account is set
+	// Ensure the mint module account has been set
 	if addr := ak.GetModuleAddress(types.ModuleName); addr == nil {
-		panic(fmt.Sprintf("the x/%s module account has not been set", types.ModuleName))
+		panic("the mint module account has not been set")
 	}
 
 	return Keeper{
 		cdc:              cdc,
-		storeKey:         key,
-		stakingKeeper:    sk,
-		bankKeeper:       bk,
+		storeKey:         storeKey,
+		stakingKeeper:    stakingKeeper,
+		bankKeeper:       bankKeeper,
 		feeCollectorName: feeCollectorName,
-		authority:        authority,
 	}
-}
-
-// GetAuthority returns the x/mint module's authority.
-func (k Keeper) GetAuthority() string {
-	return k.authority
 }
 
 // Logger returns a module-specific logger.
@@ -63,81 +50,59 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 // GetMinter returns the minter.
 func (k Keeper) GetMinter(ctx sdk.Context) (minter types.Minter) {
 	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.MinterKey)
-	if bz == nil {
+	b := store.Get(types.KeyMinter)
+	if b == nil {
 		panic("stored minter should not have been nil")
 	}
 
-	k.cdc.MustUnmarshal(bz, &minter)
-	return
+	k.cdc.MustUnmarshal(b, &minter)
+	return minter
 }
 
 // SetMinter sets the minter.
 func (k Keeper) SetMinter(ctx sdk.Context, minter types.Minter) {
 	store := ctx.KVStore(k.storeKey)
-	bz := k.cdc.MustMarshal(&minter)
-	store.Set(types.MinterKey, bz)
+	b := k.cdc.MustMarshal(&minter)
+	store.Set(types.KeyMinter, b)
 }
 
-// SetParams sets the x/mint module parameters.
-func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
-	if err := p.Validate(); err != nil {
-		return err
+// GetGenesisTime returns the genesis time.
+func (k Keeper) GetGenesisTime(ctx sdk.Context) (gt types.GenesisTime) {
+	store := ctx.KVStore(k.storeKey)
+	b := store.Get(types.KeyGenesisTime)
+	if b == nil {
+		panic("stored genesis time should not have been nil")
 	}
 
-	store := ctx.KVStore(k.storeKey)
-	bz := k.cdc.MustMarshal(&p)
-	store.Set(types.ParamsKey, bz)
-
-	return nil
+	k.cdc.MustUnmarshal(b, &gt)
+	return gt
 }
 
-// GetParams returns the current x/mint module parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
+// SetGenesisTime sets the genesis time.
+func (k Keeper) SetGenesisTime(ctx sdk.Context, gt types.GenesisTime) {
 	store := ctx.KVStore(k.storeKey)
-	bz := store.Get(types.ParamsKey)
-	if bz == nil {
-		return p
-	}
-
-	k.cdc.MustUnmarshal(bz, &p)
-	return p
+	b := k.cdc.MustMarshal(&gt)
+	store.Set(types.KeyGenesisTime, b)
 }
 
 // StakingTokenSupply implements an alias call to the underlying staking keeper's
-// StakingTokenSupply to be used in BeginBlocker.
+// StakingTokenSupply.
 func (k Keeper) StakingTokenSupply(ctx sdk.Context) math.Int {
 	return k.stakingKeeper.StakingTokenSupply(ctx)
 }
 
-func (k Keeper) CirculatingRatio(ctx sdk.Context) sdk.Dec {
-	circulatingSupply := k.stakingKeeper.StakingTokenCirculatingSupply(ctx)
-	totalSupply := k.stakingKeeper.StakingTokenSupply(ctx)
-	if circulatingSupply.IsPositive() {
-		return sdk.NewDecFromInt(circulatingSupply).QuoInt(totalSupply)
-	}
-	return sdk.ZeroDec()
-}
-
-// BondedRatio implements an alias call to the underlying staking keeper's
-// BondedRatio to be used in BeginBlocker.
-func (k Keeper) BondedRatio(ctx sdk.Context) math.LegacyDec {
-	return k.stakingKeeper.BondedRatio(ctx)
-}
-
-// MintCoins implements an alias call to the underlying supply keeper's
-// MintCoins to be used in BeginBlocker.
+// MintCoins implements an alias call to the underlying bank keeper's
+// MintCoins.
 func (k Keeper) MintCoins(ctx sdk.Context, newCoins sdk.Coins) error {
 	if newCoins.Empty() {
-		// skip as no coins need to be minted
 		return nil
 	}
 
 	return k.bankKeeper.MintCoins(ctx, types.ModuleName, newCoins)
 }
 
-// AddCollectedFees implements an alias call to the underlying supply keeper's
-// AddCollectedFees to be used in BeginBlocker.
-func (k Keeper) AddCollectedFees(ctx sdk.Context, fees sdk.Coins) error {
-	return k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, k.feeCollectorName, fees)
+// SendCoinsToFeeCollector sends newly minted coins from the x/mint module to
+// the x/auth fee collector module account.
+func (k Keeper) SendCoinsToFeeCollector(ctx sdk.Context, coins sdk.Coins) error {
+	return k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, k.feeCollectorName, coins)
 }

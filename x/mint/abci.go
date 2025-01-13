@@ -7,80 +7,84 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	"github.com/cosmos/cosmos-sdk/x/mint/types"
-	"github.com/shopspring/decimal"
 )
 
-func decExp(x sdk.Dec) sdk.Dec {
-	xDec := decimal.NewFromBigInt(x.BigInt(), -18)
-	expDec, _ := xDec.ExpTaylor(18)
-	expInt := expDec.Shift(18).BigInt()
-	return sdk.NewDecFromBigIntWithPrec(expInt, 18)
-}
-
-func NextInflationRate(ctx sdk.Context, params types.Params, bondedRatio sdk.Dec, circulatingRatio sdk.Dec) sdk.Dec {
-	X := bondedRatio.Quo(circulatingRatio)
-	var apy sdk.Dec
-	if X.LT(params.MinStakedRatio) {
-		apy = params.ApyAtMinStakedRatio
-	} else if X.GT(params.MaxStakedRatio) {
-		apy = params.ApyAtMaxStakedRatio
-	} else {
-		exp := params.DecayRate.Neg().Mul(params.MaxStakedRatio.Sub(params.MinStakedRatio))
-		c := decExp(exp)
-		d := params.ApyAtMaxStakedRatio.Sub(params.ApyAtMinStakedRatio.Mul(c)).Quo(sdk.OneDec().Sub(c))
-		expBonded := params.DecayRate.Neg().Mul(X.Sub(params.MinStakedRatio))
-		cBonded := decExp(expBonded)
-		e := params.ApyAtMinStakedRatio.Sub(d).Mul(cBonded)
-		apy = d.Add(e)
-	}
-
-	inflation := apy.Mul(bondedRatio)
-
-	return inflation
-}
-
-// BeginBlocker mints new tokens for the previous block.
-func BeginBlocker(ctx sdk.Context, k keeper.Keeper, ic types.InflationCalculationFn) {
+// BeginBlocker updates the inflation rate, annual provisions, and then mints
+// the block provision for the current block.
+func BeginBlocker(ctx sdk.Context, k keeper.Keeper) {
 	defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
 
-	// fetch stored minter & params
+	maybeUpdateMinter(ctx, k)
+	mintBlockProvision(ctx, k)
+	setPreviousBlockTime(ctx, k)
+}
+
+// maybeUpdateMinter updates the inflation rate and annual provisions if the
+// inflation rate has changed. The inflation rate is expected to change once per
+// year at the genesis time anniversary until the TargetInflationRate is
+// reached.
+func maybeUpdateMinter(ctx sdk.Context, k keeper.Keeper) {
 	minter := k.GetMinter(ctx)
-	params := k.GetParams(ctx)
+	genesisTime := k.GetGenesisTime(ctx).GenesisTime
+	newInflationRate := minter.CalculateInflationRate(ctx, *genesisTime)
 
-	// recalculate inflation rate
-	totalStakingSupply := k.StakingTokenSupply(ctx)
-	bondedRatio := k.BondedRatio(ctx)
-	circulatingRaio := k.CirculatingRatio(ctx)
-	minter.Inflation = NextInflationRate(ctx, params, bondedRatio, circulatingRaio)
-	minter.AnnualProvisions = minter.NextAnnualProvisions(params, totalStakingSupply)
+	isNonZeroAnnualProvisions := !minter.AnnualProvisions.IsZero()
+	if newInflationRate.Equal(minter.InflationRate) && isNonZeroAnnualProvisions {
+		// The minter's InflationRate and AnnualProvisions already reflect the
+		// values for this year. Exit early because we don't need to update
+		// them. AnnualProvisions must be updated if it is zero (expected at
+		// genesis).
+		return
+	}
+
+	totalSupply := k.StakingTokenSupply(ctx)
+	minter.InflationRate = newInflationRate
+	minter.AnnualProvisions = newInflationRate.MulInt(totalSupply)
 	k.SetMinter(ctx, minter)
+}
 
-	// mint coins, update supply
-	mintedCoin := minter.BlockProvision(params)
-	mintedCoins := sdk.NewCoins(mintedCoin)
+// mintBlockProvision mints the block provision for the current block.
+func mintBlockProvision(ctx sdk.Context, k keeper.Keeper) {
+	minter := k.GetMinter(ctx)
+	if minter.PreviousBlockTime == nil {
+		// exit early if previous block time is nil
+		// this is expected to happen for block height = 1
+		return
+	}
 
-	err := k.MintCoins(ctx, mintedCoins)
+	toMintCoin, err := minter.CalculateBlockProvision(ctx.BlockTime(), *minter.PreviousBlockTime)
+	if err != nil {
+		panic(err)
+	}
+	toMintCoins := sdk.NewCoins(toMintCoin)
+
+	err = k.MintCoins(ctx, toMintCoins)
 	if err != nil {
 		panic(err)
 	}
 
-	// send the minted coins to the fee collector account
-	err = k.AddCollectedFees(ctx, mintedCoins)
+	err = k.SendCoinsToFeeCollector(ctx, toMintCoins)
 	if err != nil {
 		panic(err)
 	}
 
-	if mintedCoin.Amount.IsInt64() {
-		defer telemetry.ModuleSetGauge(types.ModuleName, float32(mintedCoin.Amount.Int64()), "minted_tokens")
+	if toMintCoin.Amount.IsInt64() {
+		defer telemetry.ModuleSetGauge(types.ModuleName, float32(toMintCoin.Amount.Int64()), "minted_tokens")
 	}
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			types.EventTypeMint,
-			sdk.NewAttribute(types.AttributeKeyBondedRatio, bondedRatio.String()),
-			sdk.NewAttribute(types.AttributeKeyInflation, minter.Inflation.String()),
+			sdk.NewAttribute(types.AttributeKeyInflationRate, minter.InflationRate.String()),
 			sdk.NewAttribute(types.AttributeKeyAnnualProvisions, minter.AnnualProvisions.String()),
-			sdk.NewAttribute(sdk.AttributeKeyAmount, mintedCoin.Amount.String()),
+			sdk.NewAttribute(sdk.AttributeKeyAmount, toMintCoin.Amount.String()),
 		),
 	)
+}
+
+func setPreviousBlockTime(ctx sdk.Context, k keeper.Keeper) {
+	minter := k.GetMinter(ctx)
+	blockTime := ctx.BlockTime()
+	minter.PreviousBlockTime = &blockTime
+	k.SetMinter(ctx, minter)
 }

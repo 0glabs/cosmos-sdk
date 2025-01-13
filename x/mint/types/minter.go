@@ -2,81 +2,72 @@ package types
 
 import (
 	"fmt"
-
-	"cosmossdk.io/math"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// NewMinter returns a new Minter object with the given inflation and annual
-// provisions values.
-func NewMinter(inflation, annualProvisions sdk.Dec) Minter {
+const DefaultBondDenom = "ua0gi"
+
+// NewMinter returns a new Minter object.
+func NewMinter(inflationRate sdk.Dec, annualProvisions sdk.Dec, bondDenom string) Minter {
 	return Minter{
-		Inflation:        inflation,
+		InflationRate:    inflationRate,
 		AnnualProvisions: annualProvisions,
+		BondDenom:        bondDenom,
 	}
 }
 
-// InitialMinter returns an initial Minter object with a given inflation value.
-func InitialMinter(inflation sdk.Dec) Minter {
-	return NewMinter(
-		inflation,
-		math.LegacyNewDec(0),
-	)
+// DefaultMinter returns a Minter object with default values.
+func DefaultMinter() Minter {
+	annualProvisions := sdk.NewDec(0)
+	return NewMinter(InitialInflationRateAsDec(), annualProvisions, DefaultBondDenom)
 }
 
-// DefaultInitialMinter returns a default initial Minter object for a new chain
-// which uses an inflation rate of 13%.
-func DefaultInitialMinter() Minter {
-	return InitialMinter(
-		sdk.NewDecWithPrec(13, 2),
-	)
-}
-
-// ValidateMinter does a basic validation on minter.
-func ValidateMinter(minter Minter) error {
-	if minter.Inflation.IsNegative() {
-		return fmt.Errorf("mint parameter Inflation should be positive, is %s",
-			minter.Inflation.String())
+// Validate returns an error if the minter is invalid.
+func (m Minter) Validate() error {
+	if m.InflationRate.IsNegative() {
+		return fmt.Errorf("inflation rate %v should be positive", m.InflationRate.String())
+	}
+	if m.AnnualProvisions.IsNegative() {
+		return fmt.Errorf("annual provisions %v should be positive", m.AnnualProvisions.String())
+	}
+	if m.BondDenom == "" {
+		return fmt.Errorf("bond denom should not be empty string")
 	}
 	return nil
 }
 
-// NextInflationRate returns the new inflation rate for the next hour.
-func (m Minter) NextInflationRate(params Params, bondedRatio sdk.Dec, _ sdk.Dec) math.LegacyDec {
-	// The target annual inflation rate is recalculated for each previsions cycle. The
-	// inflation is also subject to a rate change (positive or negative) depending on
-	// the distance from the desired ratio (67%). The maximum rate change possible is
-	// defined to be 13% per year, however the annual inflation is capped as between
-	// 7% and 20%.
+// CalculateInflationRate returns the inflation rate for the current year depending on
+// the current block height in context. The inflation rate is expected to
+// decrease every year according to the schedule specified in the README.
+func (m Minter) CalculateInflationRate(ctx sdk.Context, genesis time.Time) sdk.Dec {
+	years := yearsSinceGenesis(genesis, ctx.BlockTime())
+	inflationRate := InitialInflationRateAsDec().Mul(sdk.OneDec().Sub(DisinflationRateAsDec()).Power(uint64(years)))
 
-	// (1 - bondedRatio/GoalBonded) * InflationRateChange
-	inflationRateChangePerYear := math.LegacyOneDec().
-		Sub(bondedRatio.Quo(params.GoalBonded)).
-		Mul(params.InflationRateChange)
-	inflationRateChange := inflationRateChangePerYear.Quo(math.LegacyNewDec(int64(params.BlocksPerYear)))
-
-	// adjust the new annual inflation for this next cycle
-	inflation := m.Inflation.Add(inflationRateChange) // note inflationRateChange may be negative
-	if inflation.GT(params.InflationMax) {
-		inflation = params.InflationMax
+	if inflationRate.LT(TargetInflationRateAsDec()) {
+		return TargetInflationRateAsDec()
 	}
-	if inflation.LT(params.InflationMin) {
-		inflation = params.InflationMin
-	}
-
-	return inflation
+	return inflationRate
 }
 
-// NextAnnualProvisions returns the annual provisions based on current total
-// supply and inflation rate.
-func (m Minter) NextAnnualProvisions(_ Params, totalSupply math.Int) math.LegacyDec {
-	return m.Inflation.MulInt(totalSupply)
+// CalculateBlockProvision returns the total number of coins that should be
+// minted due to inflation for the current block.
+func (m Minter) CalculateBlockProvision(current time.Time, previous time.Time) (sdk.Coin, error) {
+	if current.Before(previous) {
+		return sdk.Coin{}, fmt.Errorf("current time %v cannot be before previous time %v", current, previous)
+	}
+	timeElapsed := current.Sub(previous).Nanoseconds()
+	portionOfYear := sdk.NewDec(timeElapsed).Quo(sdk.NewDec(NanosecondsPerYear))
+	blockProvision := m.AnnualProvisions.Mul(portionOfYear)
+	return sdk.NewCoin(m.BondDenom, blockProvision.TruncateInt()), nil
 }
 
-// BlockProvision returns the provisions for a block based on the annual
-// provisions rate.
-func (m Minter) BlockProvision(params Params) sdk.Coin {
-	provisionAmt := m.AnnualProvisions.QuoInt(sdk.NewInt(int64(params.BlocksPerYear)))
-	return sdk.NewCoin(params.MintDenom, provisionAmt.TruncateInt())
+// yearsSinceGenesis returns the number of years that have passed between
+// genesis and current (rounded down).
+func yearsSinceGenesis(genesis time.Time, current time.Time) (years int64) {
+	if current.Before(genesis) {
+		return 0
+	}
+	return current.Sub(genesis).Nanoseconds() / NanosecondsPerYear
 }

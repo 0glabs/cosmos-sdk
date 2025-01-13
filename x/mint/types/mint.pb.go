@@ -7,18 +7,21 @@ import (
 	fmt "fmt"
 	_ "github.com/cosmos/cosmos-proto"
 	github_com_cosmos_cosmos_sdk_types "github.com/cosmos/cosmos-sdk/types"
-	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
 	_ "github.com/cosmos/gogoproto/gogoproto"
 	proto "github.com/cosmos/gogoproto/proto"
+	github_com_cosmos_gogoproto_types "github.com/cosmos/gogoproto/types"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 	io "io"
 	math "math"
 	math_bits "math/bits"
+	time "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
+var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -26,12 +29,19 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-// Minter represents the minting state.
+// Minter represents the mint state.
 type Minter struct {
-	// current annual inflation rate
-	Inflation github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,1,opt,name=inflation,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"inflation"`
-	// current annual expected provisions
+	// InflationRate is the rate at which new tokens should be minted for the
+	// current year. For example if InflationRate=0.1, then 10% of the total
+	// supply will be minted over the course of the year.
+	InflationRate github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,1,opt,name=inflation_rate,json=inflationRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"inflation_rate"`
+	// AnnualProvisions is the total number of tokens to be minted in the current
+	// year due to inflation.
 	AnnualProvisions github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=annual_provisions,json=annualProvisions,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"annual_provisions"`
+	// PreviousBlockTime is the timestamp of the previous block.
+	PreviousBlockTime *time.Time `protobuf:"bytes,4,opt,name=previous_block_time,json=previousBlockTime,proto3,stdtime" json:"previous_block_time,omitempty"`
+	// BondDenom is the denomination of the token that should be minted.
+	BondDenom string `protobuf:"bytes,5,opt,name=bond_denom,json=bondDenom,proto3" json:"bond_denom,omitempty"`
 }
 
 func (m *Minter) Reset()         { *m = Minter{} }
@@ -67,38 +77,38 @@ func (m *Minter) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Minter proto.InternalMessageInfo
 
-// Params defines the parameters for the x/mint module.
-type Params struct {
-	// type of coin to mint
-	MintDenom string `protobuf:"bytes,1,opt,name=mint_denom,json=mintDenom,proto3" json:"mint_denom,omitempty"`
-	// maximum annual change in inflation rate
-	InflationRateChange github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,2,opt,name=inflation_rate_change,json=inflationRateChange,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"inflation_rate_change"`
-	// maximum inflation rate
-	InflationMax github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,3,opt,name=inflation_max,json=inflationMax,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"inflation_max"`
-	// minimum inflation rate
-	InflationMin github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,4,opt,name=inflation_min,json=inflationMin,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"inflation_min"`
-	// goal of percent bonded atoms
-	GoalBonded github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,5,opt,name=goal_bonded,json=goalBonded,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"goal_bonded"`
-	// expected blocks per year
-	BlocksPerYear       uint64                                 `protobuf:"varint,6,opt,name=blocks_per_year,json=blocksPerYear,proto3" json:"blocks_per_year,omitempty"`
-	MaxStakedRatio      github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,7,opt,name=max_staked_ratio,json=maxStakedRatio,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"max_staked_ratio"`
-	ApyAtMaxStakedRatio github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,8,opt,name=apy_at_max_staked_ratio,json=apyAtMaxStakedRatio,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"apy_at_max_staked_ratio"`
-	MinStakedRatio      github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,9,opt,name=min_staked_ratio,json=minStakedRatio,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"min_staked_ratio"`
-	ApyAtMinStakedRatio github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,10,opt,name=apy_at_min_staked_ratio,json=apyAtMinStakedRatio,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"apy_at_min_staked_ratio"`
-	DecayRate           github_com_cosmos_cosmos_sdk_types.Dec `protobuf:"bytes,11,opt,name=decay_rate,json=decayRate,proto3,customtype=github.com/cosmos/cosmos-sdk/types.Dec" json:"decay_rate"`
+func (m *Minter) GetPreviousBlockTime() *time.Time {
+	if m != nil {
+		return m.PreviousBlockTime
+	}
+	return nil
 }
 
-func (m *Params) Reset()      { *m = Params{} }
-func (*Params) ProtoMessage() {}
-func (*Params) Descriptor() ([]byte, []int) {
+func (m *Minter) GetBondDenom() string {
+	if m != nil {
+		return m.BondDenom
+	}
+	return ""
+}
+
+// GenesisTime contains the timestamp of the genesis block.
+type GenesisTime struct {
+	// GenesisTime is the timestamp of the genesis block.
+	GenesisTime *time.Time `protobuf:"bytes,1,opt,name=genesis_time,json=genesisTime,proto3,stdtime" json:"genesis_time,omitempty"`
+}
+
+func (m *GenesisTime) Reset()         { *m = GenesisTime{} }
+func (m *GenesisTime) String() string { return proto.CompactTextString(m) }
+func (*GenesisTime) ProtoMessage()    {}
+func (*GenesisTime) Descriptor() ([]byte, []int) {
 	return fileDescriptor_2df116d183c1e223, []int{1}
 }
-func (m *Params) XXX_Unmarshal(b []byte) error {
+func (m *GenesisTime) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Params) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GenesisTime) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Params.Marshal(b, m, deterministic)
+		return xxx_messageInfo_GenesisTime.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -108,73 +118,58 @@ func (m *Params) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Params) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Params.Merge(m, src)
+func (m *GenesisTime) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GenesisTime.Merge(m, src)
 }
-func (m *Params) XXX_Size() int {
+func (m *GenesisTime) XXX_Size() int {
 	return m.Size()
 }
-func (m *Params) XXX_DiscardUnknown() {
-	xxx_messageInfo_Params.DiscardUnknown(m)
+func (m *GenesisTime) XXX_DiscardUnknown() {
+	xxx_messageInfo_GenesisTime.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Params proto.InternalMessageInfo
+var xxx_messageInfo_GenesisTime proto.InternalMessageInfo
 
-func (m *Params) GetMintDenom() string {
+func (m *GenesisTime) GetGenesisTime() *time.Time {
 	if m != nil {
-		return m.MintDenom
+		return m.GenesisTime
 	}
-	return ""
-}
-
-func (m *Params) GetBlocksPerYear() uint64 {
-	if m != nil {
-		return m.BlocksPerYear
-	}
-	return 0
+	return nil
 }
 
 func init() {
 	proto.RegisterType((*Minter)(nil), "cosmos.mint.v1beta1.Minter")
-	proto.RegisterType((*Params)(nil), "cosmos.mint.v1beta1.Params")
+	proto.RegisterType((*GenesisTime)(nil), "cosmos.mint.v1beta1.GenesisTime")
 }
 
 func init() { proto.RegisterFile("cosmos/mint/v1beta1/mint.proto", fileDescriptor_2df116d183c1e223) }
 
 var fileDescriptor_2df116d183c1e223 = []byte{
-	// 504 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x94, 0x41, 0x6f, 0xd3, 0x30,
-	0x14, 0x80, 0x1b, 0x18, 0x65, 0xf5, 0x18, 0x6c, 0x1e, 0x88, 0x30, 0x89, 0x74, 0xec, 0x30, 0x0d,
-	0xa4, 0x35, 0x9a, 0xb8, 0x21, 0x2e, 0x74, 0xbd, 0x56, 0xaa, 0xc2, 0x89, 0x21, 0x64, 0xbd, 0x24,
-	0x5e, 0x66, 0xb5, 0xb1, 0xa3, 0xd8, 0x9b, 0x92, 0xbf, 0xc0, 0x89, 0x23, 0x27, 0xc4, 0x4f, 0xe0,
-	0xc0, 0x8f, 0xd8, 0x8d, 0x89, 0x13, 0xe2, 0x30, 0xa1, 0xf6, 0xc0, 0xdf, 0x40, 0xb6, 0xa3, 0x8e,
-	0x0e, 0xb1, 0x93, 0x2f, 0x6d, 0xf2, 0x9e, 0xfd, 0x7d, 0xef, 0x25, 0xf1, 0x43, 0x41, 0x22, 0x64,
-	0x2e, 0x64, 0x98, 0x33, 0xae, 0xc2, 0xd3, 0xfd, 0x98, 0x2a, 0xd8, 0x37, 0x37, 0xbd, 0xa2, 0x14,
-	0x4a, 0xe0, 0x0d, 0x9b, 0xef, 0x99, 0x50, 0x93, 0xdf, 0xbc, 0x9f, 0x89, 0x4c, 0x98, 0x7c, 0xa8,
-	0xaf, 0xec, 0xd2, 0xcd, 0x47, 0x76, 0x29, 0xb1, 0x89, 0x66, 0x9f, 0x4d, 0xad, 0x43, 0xce, 0xb8,
-	0x08, 0xcd, 0xaf, 0x0d, 0x6d, 0x7f, 0xf3, 0x50, 0x7b, 0xc8, 0xb8, 0xa2, 0x25, 0x3e, 0x44, 0x1d,
-	0xc6, 0x8f, 0x26, 0xa0, 0x98, 0xe0, 0xbe, 0xb7, 0xe5, 0xed, 0x76, 0xfa, 0x2f, 0xcf, 0x2e, 0xba,
-	0xad, 0x9f, 0x17, 0xdd, 0x9d, 0x8c, 0xa9, 0xe3, 0x93, 0xb8, 0x97, 0x88, 0xbc, 0x21, 0x36, 0x7f,
-	0x7b, 0x32, 0x1d, 0x87, 0xaa, 0x2e, 0xa8, 0xec, 0x0d, 0x68, 0xf2, 0xfd, 0xeb, 0x1e, 0x6a, 0x84,
-	0x03, 0x9a, 0x44, 0x97, 0x38, 0xcc, 0xd0, 0x3a, 0x70, 0x7e, 0x02, 0x13, 0x5d, 0xd6, 0x29, 0x93,
-	0x4c, 0x70, 0xe9, 0xdf, 0x70, 0xe0, 0x58, 0xb3, 0xd8, 0xd1, 0x9c, 0xba, 0xfd, 0x69, 0x19, 0xb5,
-	0x47, 0x50, 0x42, 0x2e, 0xf1, 0x63, 0x84, 0xf4, 0x03, 0x23, 0x29, 0xe5, 0x22, 0xb7, 0x2d, 0x45,
-	0x1d, 0x1d, 0x19, 0xe8, 0x00, 0x2e, 0xd0, 0x83, 0x79, 0x85, 0xa4, 0x04, 0x45, 0x49, 0x72, 0x0c,
-	0x3c, 0xa3, 0x4e, 0x0a, 0xdb, 0x98, 0xa3, 0x23, 0x50, 0xf4, 0xc0, 0x80, 0x31, 0xa0, 0xd5, 0x4b,
-	0x63, 0x0e, 0x95, 0x7f, 0xd3, 0x81, 0xe9, 0xce, 0x1c, 0x39, 0x84, 0xea, 0x8a, 0x82, 0x71, 0x7f,
-	0xc9, 0xad, 0x82, 0x71, 0xfc, 0x0e, 0xad, 0x64, 0x02, 0x26, 0x24, 0x16, 0x3c, 0xa5, 0xa9, 0x7f,
-	0xcb, 0x81, 0x00, 0x69, 0x60, 0xdf, 0xf0, 0xf0, 0x0e, 0xba, 0x17, 0x4f, 0x44, 0x32, 0x96, 0xa4,
-	0xa0, 0x25, 0xa9, 0x29, 0x94, 0x7e, 0x7b, 0xcb, 0xdb, 0x5d, 0x8a, 0x56, 0x6d, 0x78, 0x44, 0xcb,
-	0x37, 0x14, 0x4a, 0x7c, 0x84, 0xd6, 0x72, 0xa8, 0x88, 0x54, 0x30, 0xa6, 0xa9, 0x7e, 0x7f, 0x4c,
-	0xf8, 0xb7, 0x1d, 0xd4, 0x72, 0x37, 0x87, 0xea, 0xb5, 0x81, 0x46, 0x9a, 0x89, 0x4b, 0xf4, 0x10,
-	0x8a, 0x9a, 0x80, 0x22, 0xff, 0xe8, 0x96, 0x5d, 0x7c, 0x28, 0x50, 0xd4, 0xaf, 0xd4, 0x70, 0xd1,
-	0xa9, 0x7b, 0x63, 0x7c, 0x51, 0xd6, 0x71, 0xd2, 0x1b, 0xe3, 0xff, 0xe9, 0xed, 0xaa, 0x0e, 0xb9,
-	0xeb, 0x6d, 0xd1, 0xf9, 0x16, 0xa1, 0x94, 0x26, 0x50, 0x9b, 0x23, 0xe7, 0xaf, 0xb8, 0x18, 0x34,
-	0x86, 0xa7, 0xcf, 0xd9, 0x8b, 0x27, 0x1f, 0x3f, 0x77, 0x5b, 0xef, 0x7f, 0x7f, 0x79, 0xe6, 0xff,
-	0xb5, 0xaf, 0xb2, 0x73, 0xd5, 0x4e, 0x85, 0xfe, 0xc1, 0xd9, 0x34, 0xf0, 0xce, 0xa7, 0x81, 0xf7,
-	0x6b, 0x1a, 0x78, 0x1f, 0x66, 0x41, 0xeb, 0x7c, 0x16, 0xb4, 0x7e, 0xcc, 0x82, 0xd6, 0xe1, 0xd3,
-	0x6b, 0xed, 0x0d, 0xc5, 0x14, 0x11, 0xb7, 0xcd, 0xf8, 0x7c, 0xfe, 0x27, 0x00, 0x00, 0xff, 0xff,
-	0x2d, 0x8c, 0x47, 0x0e, 0xb9, 0x05, 0x00, 0x00,
+	// 374 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x52, 0xb1, 0x6e, 0xea, 0x30,
+	0x14, 0x8d, 0x11, 0x0f, 0x09, 0xf3, 0xde, 0xd3, 0x23, 0xbc, 0x21, 0x0f, 0xe9, 0x25, 0x88, 0xa1,
+	0xa2, 0x03, 0x89, 0x68, 0xd7, 0x4e, 0x01, 0xa9, 0x53, 0x25, 0x14, 0x75, 0xea, 0x12, 0x25, 0xc1,
+	0xa4, 0x16, 0x89, 0x6f, 0x14, 0x3b, 0xa8, 0xfd, 0x0b, 0x3e, 0xa6, 0x1f, 0x41, 0x37, 0xd4, 0xa9,
+	0xea, 0x40, 0x2b, 0xf8, 0x91, 0xca, 0x71, 0xa0, 0x5b, 0xd5, 0xa1, 0x93, 0x7d, 0xef, 0x39, 0xf7,
+	0x9c, 0xeb, 0x23, 0x63, 0x33, 0x02, 0x9e, 0x02, 0x77, 0x52, 0xca, 0x84, 0xb3, 0x1c, 0x85, 0x44,
+	0x04, 0xa3, 0xb2, 0xb0, 0xb3, 0x1c, 0x04, 0xe8, 0x1d, 0x85, 0xdb, 0x65, 0xab, 0xc2, 0xbb, 0x7f,
+	0x63, 0x88, 0xa1, 0xc4, 0x1d, 0x79, 0x53, 0xd4, 0xee, 0x3f, 0x45, 0xf5, 0x15, 0x50, 0xcd, 0x29,
+	0xc8, 0x8a, 0x01, 0xe2, 0x84, 0x38, 0x65, 0x15, 0x16, 0x73, 0x47, 0xd0, 0x94, 0x70, 0x11, 0xa4,
+	0x99, 0x22, 0xf4, 0x1f, 0x6b, 0xb8, 0x71, 0x45, 0x99, 0x20, 0xb9, 0x1e, 0xe1, 0xdf, 0x94, 0xcd,
+	0x93, 0x40, 0x50, 0x60, 0x7e, 0x1e, 0x08, 0x62, 0xa0, 0x1e, 0x1a, 0x34, 0xdd, 0x8b, 0xf5, 0xd6,
+	0xd2, 0x5e, 0xb6, 0xd6, 0x49, 0x4c, 0xc5, 0x6d, 0x11, 0xda, 0x11, 0xa4, 0x95, 0x49, 0x75, 0x0c,
+	0xf9, 0x6c, 0xe1, 0x88, 0xfb, 0x8c, 0x70, 0x7b, 0x42, 0xa2, 0xa7, 0x87, 0x21, 0xae, 0x76, 0x98,
+	0x90, 0xc8, 0xfb, 0x75, 0xd4, 0xf4, 0x02, 0x41, 0x74, 0x8a, 0xdb, 0x01, 0x63, 0x45, 0x90, 0xc8,
+	0x6d, 0x97, 0x94, 0x53, 0x60, 0xdc, 0xa8, 0x7d, 0x83, 0xcf, 0x1f, 0x25, 0x3b, 0x3d, 0xaa, 0xea,
+	0x53, 0xdc, 0xc9, 0x72, 0xb2, 0xa4, 0x50, 0x70, 0x3f, 0x4c, 0x20, 0x5a, 0xf8, 0xf2, 0xf1, 0x46,
+	0xbd, 0x87, 0x06, 0xad, 0xb3, 0xae, 0xad, 0x92, 0xb1, 0x0f, 0xc9, 0xd8, 0xd7, 0x87, 0x64, 0xdc,
+	0xfa, 0xea, 0xd5, 0x42, 0x5e, 0xfb, 0x30, 0xec, 0xca, 0x59, 0x89, 0xea, 0xff, 0x31, 0x0e, 0x81,
+	0xcd, 0xfc, 0x19, 0x61, 0x90, 0x1a, 0x3f, 0xe4, 0xd6, 0x5e, 0x53, 0x76, 0x26, 0xb2, 0xd1, 0xf7,
+	0x70, 0xeb, 0x92, 0x30, 0xc2, 0x29, 0x2f, 0xd9, 0x63, 0xfc, 0x33, 0x56, 0xa5, 0x32, 0x46, 0x5f,
+	0x34, 0x6e, 0xc5, 0x1f, 0x22, 0xee, 0x78, 0xbd, 0x33, 0xd1, 0x66, 0x67, 0xa2, 0xb7, 0x9d, 0x89,
+	0x56, 0x7b, 0x53, 0xdb, 0xec, 0x4d, 0xed, 0x79, 0x6f, 0x6a, 0x37, 0xa7, 0x9f, 0xc6, 0x74, 0xa7,
+	0x3e, 0x56, 0x99, 0x56, 0xd8, 0x28, 0xbd, 0xce, 0xdf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x96, 0xac,
+	0xa1, 0xfb, 0x74, 0x02, 0x00, 0x00,
 }
 
 func (m *Minter) Marshal() (dAtA []byte, err error) {
@@ -197,6 +192,23 @@ func (m *Minter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.BondDenom) > 0 {
+		i -= len(m.BondDenom)
+		copy(dAtA[i:], m.BondDenom)
+		i = encodeVarintMint(dAtA, i, uint64(len(m.BondDenom)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.PreviousBlockTime != nil {
+		n1, err1 := github_com_cosmos_gogoproto_types.StdTimeMarshalTo(*m.PreviousBlockTime, dAtA[i-github_com_cosmos_gogoproto_types.SizeOfStdTime(*m.PreviousBlockTime):])
+		if err1 != nil {
+			return 0, err1
+		}
+		i -= n1
+		i = encodeVarintMint(dAtA, i, uint64(n1))
+		i--
+		dAtA[i] = 0x22
+	}
 	{
 		size := m.AnnualProvisions.Size()
 		i -= size
@@ -208,9 +220,9 @@ func (m *Minter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i--
 	dAtA[i] = 0x12
 	{
-		size := m.Inflation.Size()
+		size := m.InflationRate.Size()
 		i -= size
-		if _, err := m.Inflation.MarshalTo(dAtA[i:]); err != nil {
+		if _, err := m.InflationRate.MarshalTo(dAtA[i:]); err != nil {
 			return 0, err
 		}
 		i = encodeVarintMint(dAtA, i, uint64(size))
@@ -220,7 +232,7 @@ func (m *Minter) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *Params) Marshal() (dAtA []byte, err error) {
+func (m *GenesisTime) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -230,115 +242,23 @@ func (m *Params) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Params) MarshalTo(dAtA []byte) (int, error) {
+func (m *GenesisTime) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *Params) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *GenesisTime) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	{
-		size := m.DecayRate.Size()
-		i -= size
-		if _, err := m.DecayRate.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
+	if m.GenesisTime != nil {
+		n2, err2 := github_com_cosmos_gogoproto_types.StdTimeMarshalTo(*m.GenesisTime, dAtA[i-github_com_cosmos_gogoproto_types.SizeOfStdTime(*m.GenesisTime):])
+		if err2 != nil {
+			return 0, err2
 		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x5a
-	{
-		size := m.ApyAtMinStakedRatio.Size()
-		i -= size
-		if _, err := m.ApyAtMinStakedRatio.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x52
-	{
-		size := m.MinStakedRatio.Size()
-		i -= size
-		if _, err := m.MinStakedRatio.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x4a
-	{
-		size := m.ApyAtMaxStakedRatio.Size()
-		i -= size
-		if _, err := m.ApyAtMaxStakedRatio.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x42
-	{
-		size := m.MaxStakedRatio.Size()
-		i -= size
-		if _, err := m.MaxStakedRatio.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x3a
-	if m.BlocksPerYear != 0 {
-		i = encodeVarintMint(dAtA, i, uint64(m.BlocksPerYear))
-		i--
-		dAtA[i] = 0x30
-	}
-	{
-		size := m.GoalBonded.Size()
-		i -= size
-		if _, err := m.GoalBonded.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x2a
-	{
-		size := m.InflationMin.Size()
-		i -= size
-		if _, err := m.InflationMin.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x22
-	{
-		size := m.InflationMax.Size()
-		i -= size
-		if _, err := m.InflationMax.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x1a
-	{
-		size := m.InflationRateChange.Size()
-		i -= size
-		if _, err := m.InflationRateChange.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintMint(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
-	if len(m.MintDenom) > 0 {
-		i -= len(m.MintDenom)
-		copy(dAtA[i:], m.MintDenom)
-		i = encodeVarintMint(dAtA, i, uint64(len(m.MintDenom)))
+		i -= n2
+		i = encodeVarintMint(dAtA, i, uint64(n2))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -362,44 +282,31 @@ func (m *Minter) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = m.Inflation.Size()
+	l = m.InflationRate.Size()
 	n += 1 + l + sovMint(uint64(l))
 	l = m.AnnualProvisions.Size()
 	n += 1 + l + sovMint(uint64(l))
+	if m.PreviousBlockTime != nil {
+		l = github_com_cosmos_gogoproto_types.SizeOfStdTime(*m.PreviousBlockTime)
+		n += 1 + l + sovMint(uint64(l))
+	}
+	l = len(m.BondDenom)
+	if l > 0 {
+		n += 1 + l + sovMint(uint64(l))
+	}
 	return n
 }
 
-func (m *Params) Size() (n int) {
+func (m *GenesisTime) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.MintDenom)
-	if l > 0 {
+	if m.GenesisTime != nil {
+		l = github_com_cosmos_gogoproto_types.SizeOfStdTime(*m.GenesisTime)
 		n += 1 + l + sovMint(uint64(l))
 	}
-	l = m.InflationRateChange.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.InflationMax.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.InflationMin.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.GoalBonded.Size()
-	n += 1 + l + sovMint(uint64(l))
-	if m.BlocksPerYear != 0 {
-		n += 1 + sovMint(uint64(m.BlocksPerYear))
-	}
-	l = m.MaxStakedRatio.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.ApyAtMaxStakedRatio.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.MinStakedRatio.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.ApyAtMinStakedRatio.Size()
-	n += 1 + l + sovMint(uint64(l))
-	l = m.DecayRate.Size()
-	n += 1 + l + sovMint(uint64(l))
 	return n
 }
 
@@ -440,7 +347,7 @@ func (m *Minter) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Inflation", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field InflationRate", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -468,7 +375,7 @@ func (m *Minter) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Inflation.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.InflationRate.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -506,6 +413,74 @@ func (m *Minter) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PreviousBlockTime", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMint
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMint
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMint
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.PreviousBlockTime == nil {
+				m.PreviousBlockTime = new(time.Time)
+			}
+			if err := github_com_cosmos_gogoproto_types.StdTimeUnmarshal(m.PreviousBlockTime, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BondDenom", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMint
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthMint
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMint
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BondDenom = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipMint(dAtA[iNdEx:])
@@ -527,7 +502,7 @@ func (m *Minter) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Params) Unmarshal(dAtA []byte) error {
+func (m *GenesisTime) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -550,17 +525,17 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Params: wiretype end group for non-group")
+			return fmt.Errorf("proto: GenesisTime: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Params: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GenesisTime: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MintDenom", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisTime", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowMint
@@ -570,346 +545,25 @@ func (m *Params) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return ErrInvalidLengthMint
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return ErrInvalidLengthMint
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.MintDenom = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InflationRateChange", wireType)
+			if m.GenesisTime == nil {
+				m.GenesisTime = new(time.Time)
 			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.InflationRateChange.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InflationMax", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.InflationMax.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InflationMin", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.InflationMin.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field GoalBonded", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.GoalBonded.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlocksPerYear", wireType)
-			}
-			m.BlocksPerYear = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BlocksPerYear |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MaxStakedRatio", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.MaxStakedRatio.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ApyAtMaxStakedRatio", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.ApyAtMaxStakedRatio.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MinStakedRatio", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.MinStakedRatio.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 10:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ApyAtMinStakedRatio", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.ApyAtMinStakedRatio.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 11:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DecayRate", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowMint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthMint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthMint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.DecayRate.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := github_com_cosmos_gogoproto_types.StdTimeUnmarshal(m.GenesisTime, dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

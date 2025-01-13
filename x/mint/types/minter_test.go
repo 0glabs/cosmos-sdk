@@ -3,135 +3,258 @@ package types
 import (
 	"math/rand"
 	"testing"
+	time "time"
 
-	"cosmossdk.io/math"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-func TestNextInflation(t *testing.T) {
-	minter := DefaultInitialMinter()
-	params := DefaultParams()
-	blocksPerYr := math.LegacyNewDec(int64(params.BlocksPerYear))
+func TestCalculateInflationRate(t *testing.T) {
+	minter := DefaultMinter()
+	genesisTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	// Governing Mechanism:
-	//    inflationRateChangePerYear = (1- BondedRatio/ GoalBonded) * MaxInflationRateChange
-
-	tests := []struct {
-		bondedRatio, setInflation, expChange sdk.Dec
-	}{
-		// with 0% bonded atom supply the inflation should increase by InflationRateChange
-		{math.LegacyZeroDec(), sdk.NewDecWithPrec(7, 2), params.InflationRateChange.Quo(blocksPerYr)},
-
-		// 100% bonded, starting at 20% inflation and being reduced
-		// (1 - (1/0.67))*(0.13/8667)
-		{
-			math.LegacyOneDec(), sdk.NewDecWithPrec(20, 2),
-			math.LegacyOneDec().Sub(math.LegacyOneDec().Quo(params.GoalBonded)).Mul(params.InflationRateChange).Quo(blocksPerYr),
-		},
-
-		// 50% bonded, starting at 10% inflation and being increased
-		{
-			sdk.NewDecWithPrec(5, 1), sdk.NewDecWithPrec(10, 2),
-			math.LegacyOneDec().Sub(sdk.NewDecWithPrec(5, 1).Quo(params.GoalBonded)).Mul(params.InflationRateChange).Quo(blocksPerYr),
-		},
-
-		// test 7% minimum stop (testing with 100% bonded)
-		{math.LegacyOneDec(), sdk.NewDecWithPrec(7, 2), math.LegacyZeroDec()},
-		{math.LegacyOneDec(), sdk.NewDecWithPrec(700000001, 10), sdk.NewDecWithPrec(-1, 10)},
-
-		// test 20% maximum stop (testing with 0% bonded)
-		{math.LegacyZeroDec(), sdk.NewDecWithPrec(20, 2), math.LegacyZeroDec()},
-		{math.LegacyZeroDec(), sdk.NewDecWithPrec(1999999999, 10), sdk.NewDecWithPrec(1, 10)},
-
-		// perfect balance shouldn't change inflation
-		{sdk.NewDecWithPrec(67, 2), sdk.NewDecWithPrec(15, 2), math.LegacyZeroDec()},
+	type testCase struct {
+		year int64
+		want float64
 	}
-	for i, tc := range tests {
-		minter.Inflation = tc.setInflation
 
-		inflation := minter.NextInflationRate(params, tc.bondedRatio, sdk.ZeroDec())
-		diffInflation := inflation.Sub(tc.setInflation)
-
-		require.True(t, diffInflation.Equal(tc.expChange),
-			"Test Index: %v\nDiff:  %v\nExpected: %v\n", i, diffInflation, tc.expChange)
+	testCases := []testCase{
+		{0, 0.08},
+		{1, 0.072},
+		{2, 0.0648},
+		{3, 0.05832},
+		{4, 0.052488},
+		{5, 0.0472392},
+		{6, 0.04251528},
+		{7, 0.038263752},
+		{8, 0.0344373768},
+		{9, 0.03099363912},
+		{10, 0.027894275208},
+		{11, 0.0251048476872},
+		{12, 0.02259436291848},
+		{13, 0.020334926626632},
+		{14, 0.0183014339639688},
+		{15, 0.01647129056757192},
+		{16, 0.0150},
+		{17, 0.0150},
+		{18, 0.0150},
+		{19, 0.0150},
+		{20, 0.0150},
+		{21, 0.0150},
+		{22, 0.0150},
+		{23, 0.0150},
+		{24, 0.0150},
+		{25, 0.0150},
+		{26, 0.0150},
+		{27, 0.0150},
+		{28, 0.0150},
+		{29, 0.0150},
+		{30, 0.0150},
+		{31, 0.0150},
+		{32, 0.0150},
+		{33, 0.0150},
+		{34, 0.0150},
+		{35, 0.0150},
+		{36, 0.0150},
+		{37, 0.0150},
+		{38, 0.0150},
+		{39, 0.0150},
+		{40, 0.0150},
 	}
-}
 
-func TestBlockProvision(t *testing.T) {
-	minter := InitialMinter(sdk.NewDecWithPrec(1, 1))
-	params := DefaultParams()
-
-	secondsPerYear := int64(60 * 60 * 8766)
-
-	tests := []struct {
-		annualProvisions int64
-		expProvisions    int64
-	}{
-		{secondsPerYear / 5, 1},
-		{secondsPerYear/5 + 1, 1},
-		{(secondsPerYear / 5) * 2, 2},
-		{(secondsPerYear / 5) / 2, 0},
-	}
-	for i, tc := range tests {
-		minter.AnnualProvisions = math.LegacyNewDec(tc.annualProvisions)
-		provisions := minter.BlockProvision(params)
-
-		expProvisions := sdk.NewCoin(params.MintDenom,
-			sdk.NewInt(tc.expProvisions))
-
-		require.True(t, expProvisions.IsEqual(provisions),
-			"test: %v\n\tExp: %v\n\tGot: %v\n",
-			i, tc.expProvisions, provisions)
+	for _, tc := range testCases {
+		years := time.Duration(tc.year * NanosecondsPerYear * int64(time.Nanosecond))
+		blockTime := genesisTime.Add(years)
+		ctx := sdk.NewContext(nil, tmproto.Header{}, false, nil).WithBlockTime(blockTime)
+		inflationRate := minter.CalculateInflationRate(ctx, genesisTime)
+		got, err := inflationRate.Float64()
+		assert.NoError(t, err)
+		assert.Equal(t, tc.want, got, "want %v got %v year %v blockTime %v", tc.want, got, tc.year, blockTime)
 	}
 }
 
-// Benchmarking :)
-// previously using math.Int operations:
-// BenchmarkBlockProvision-4 5000000 220 ns/op
-//
-// using math.LegacyDec operations: (current implementation)
-// BenchmarkBlockProvision-4 3000000 429 ns/op
-func BenchmarkBlockProvision(b *testing.B) {
+func TestCalculateBlockProvision(t *testing.T) {
+	minter := DefaultMinter()
+	current := time.Date(2023, 1, 2, 0, 0, 0, 0, time.UTC)
+	blockInterval := 15 * time.Second
+	totalSupply := sdk.NewDec(1_000_000_000_000)                     // 1 trillion utia
+	annualProvisions := totalSupply.Mul(InitialInflationRateAsDec()) // 80 billion utia
+
+	type testCase struct {
+		name             string
+		annualProvisions sdk.Dec
+		current          time.Time
+		previous         time.Time
+		want             sdk.Coin
+		wantErr          bool
+	}
+
+	testCases := []testCase{
+		{
+			name:             "one 15 second block during the first year",
+			annualProvisions: annualProvisions,
+			current:          current,
+			previous:         current.Add(-blockInterval),
+			// 80 billion utia (annual provisions) * 15 (seconds) / 31,556,952 (seconds per year) = 38026.48620817 which truncates to 38026 utia
+			want: sdk.NewCoin(DefaultBondDenom, sdk.NewInt(38026)),
+		},
+		{
+			name:             "one 30 second block during the first year",
+			annualProvisions: annualProvisions,
+			current:          current,
+			previous:         current.Add(-2 * blockInterval),
+			// 80 billion utia (annual provisions) * 30 (seconds) / 31,556,952 (seconds per year) = 76052.97241635 which truncates to 76052 utia
+			want: sdk.NewCoin(DefaultBondDenom, sdk.NewInt(76052)),
+		},
+		{
+			name:             "want error when current time is before previous time",
+			annualProvisions: annualProvisions,
+			current:          current,
+			previous:         current.Add(blockInterval),
+			wantErr:          true,
+		},
+	}
+	for _, tc := range testCases {
+		minter.AnnualProvisions = tc.annualProvisions
+		got, err := minter.CalculateBlockProvision(tc.current, tc.previous)
+		if tc.wantErr {
+			assert.Error(t, err)
+			return
+		}
+		assert.NoError(t, err)
+		require.True(t, tc.want.IsEqual(got), "want %v got %v", tc.want, got)
+	}
+}
+
+// TestCalculateBlockProvisionError verifies that the error for total block
+// provisions in a year is less than .01
+func TestCalculateBlockProvisionError(t *testing.T) {
+	minter := DefaultMinter()
+	current := time.Date(2023, 1, 2, 0, 0, 0, 0, time.UTC)
+	oneYear := time.Duration(NanosecondsPerYear)
+	end := current.Add(oneYear)
+
+	totalSupply := sdk.NewDec(1_000_000_000_000)                     // 1 trillion utia
+	annualProvisions := totalSupply.Mul(InitialInflationRateAsDec()) // 80 billion utia
+	minter.AnnualProvisions = annualProvisions
+	totalBlockProvisions := sdk.NewDec(0)
+	for current.Before(end) {
+		blockInterval := randomBlockInterval()
+		previous := current
+		current = current.Add(blockInterval)
+		got, err := minter.CalculateBlockProvision(current, previous)
+		require.NoError(t, err)
+		totalBlockProvisions = totalBlockProvisions.Add(sdk.NewDecFromInt(got.Amount))
+	}
+
+	gotError := totalBlockProvisions.Sub(annualProvisions).Abs().Quo(annualProvisions)
+	wantError := sdk.NewDecWithPrec(1, 2) // .01
+	assert.True(t, gotError.LTE(wantError))
+}
+
+func randomBlockInterval() time.Duration {
+	min := (14 * time.Second).Nanoseconds()
+	max := (16 * time.Second).Nanoseconds()
+	return time.Duration(randInRange(min, max))
+}
+
+// randInRange returns a random number in the range (min, max) inclusive.
+func randInRange(min int64, max int64) int64 {
+	return rand.Int63n(max-min) + min
+}
+
+func BenchmarkCalculateBlockProvision(b *testing.B) {
 	b.ReportAllocs()
-	minter := InitialMinter(sdk.NewDecWithPrec(1, 1))
-	params := DefaultParams()
+	minter := DefaultMinter()
 
 	s1 := rand.NewSource(100)
 	r1 := rand.New(s1)
-	minter.AnnualProvisions = math.LegacyNewDec(r1.Int63n(1000000))
+	minter.AnnualProvisions = sdk.NewDec(r1.Int63n(1000000))
+	current := time.Unix(r1.Int63n(1000000), 0)
+	previous := current.Add(-time.Second * 15)
 
-	// run the BlockProvision function b.N times
 	for n := 0; n < b.N; n++ {
-		minter.BlockProvision(params)
+		_, err := minter.CalculateBlockProvision(current, previous)
+		require.NoError(b, err)
 	}
 }
 
-// Next inflation benchmarking
-// BenchmarkNextInflation-4 1000000 1828 ns/op
-func BenchmarkNextInflation(b *testing.B) {
+func BenchmarkCalculateInflationRate(b *testing.B) {
 	b.ReportAllocs()
-	minter := InitialMinter(sdk.NewDecWithPrec(1, 1))
-	params := DefaultParams()
-	bondedRatio := sdk.NewDecWithPrec(1, 1)
+	minter := DefaultMinter()
+	genesisTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	// run the NextInflationRate function b.N times
 	for n := 0; n < b.N; n++ {
-		minter.NextInflationRate(params, bondedRatio, sdk.ZeroDec())
+		ctx := sdk.NewContext(nil, tmproto.Header{Height: int64(n)}, false, nil)
+		minter.CalculateInflationRate(ctx, genesisTime)
 	}
 }
 
-// Next annual provisions benchmarking
-// BenchmarkNextAnnualProvisions-4 5000000 251 ns/op
-func BenchmarkNextAnnualProvisions(b *testing.B) {
-	b.ReportAllocs()
-	minter := InitialMinter(sdk.NewDecWithPrec(1, 1))
-	params := DefaultParams()
-	totalSupply := sdk.NewInt(100000000000000)
+func Test_yearsSinceGenesis(t *testing.T) {
+	type testCase struct {
+		name    string
+		current time.Time
+		want    int64
+	}
 
-	// run the NextAnnualProvisions function b.N times
-	for n := 0; n < b.N; n++ {
-		minter.NextAnnualProvisions(params, totalSupply)
+	genesis := time.Date(2023, 1, 1, 12, 30, 15, 0, time.UTC) // 2023-01-01T12:30:15Z
+	oneDay, err := time.ParseDuration("24h")
+	assert.NoError(t, err)
+	oneWeek := oneDay * 7
+	oneMonth := oneDay * 30
+	oneYear := time.Duration(NanosecondsPerYear)
+	twoYears := 2 * oneYear
+	tenYears := 10 * oneYear
+	tenYearsOneMonth := tenYears + oneMonth
+
+	testCases := []testCase{
+		{
+			name:    "one day after genesis",
+			current: genesis.Add(oneDay),
+			want:    0,
+		},
+		{
+			name:    "one day before genesis",
+			current: genesis.Add(-oneDay),
+			want:    0,
+		},
+		{
+			name:    "one week after genesis",
+			current: genesis.Add(oneWeek),
+			want:    0,
+		},
+		{
+			name:    "one month after genesis",
+			current: genesis.Add(oneMonth),
+			want:    0,
+		},
+		{
+			name:    "one year after genesis",
+			current: genesis.Add(oneYear),
+			want:    1,
+		},
+		{
+			name:    "two years after genesis",
+			current: genesis.Add(twoYears),
+			want:    2,
+		},
+		{
+			name:    "ten years after genesis",
+			current: genesis.Add(tenYears),
+			want:    10,
+		},
+		{
+			name:    "ten years and one month after genesis",
+			current: genesis.Add(tenYearsOneMonth),
+			want:    10,
+		},
+	}
+
+	for _, tc := range testCases {
+		got := yearsSinceGenesis(genesis, tc.current)
+		assert.Equal(t, tc.want, got, tc.name)
 	}
 }

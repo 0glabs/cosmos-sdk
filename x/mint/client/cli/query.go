@@ -10,75 +10,46 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/mint/types"
 )
 
-// GetQueryCmd returns the cli query commands for the minting module.
+// GetQueryCmd returns the CLI query commands for the mint module.
 func GetQueryCmd() *cobra.Command {
-	mintingQueryCmd := &cobra.Command{
+	mintQueryCmd := &cobra.Command{
 		Use:                        types.ModuleName,
-		Short:                      "Querying commands for the minting module",
+		Short:                      "Querying commands for the mint module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
 	}
 
-	mintingQueryCmd.AddCommand(
-		GetCmdQueryParams(),
-		GetCmdQueryInflation(),
+	mintQueryCmd.AddCommand(
+		GetCmdQueryInflationRate(),
 		GetCmdQueryAnnualProvisions(),
+		GetCmdQueryGenesisTime(),
 	)
 
-	return mintingQueryCmd
+	return mintQueryCmd
 }
 
-// GetCmdQueryParams implements a command to return the current minting
-// parameters.
-func GetCmdQueryParams() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "params",
-		Short: "Query the current minting parameters",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
-			if err != nil {
-				return err
-			}
-			queryClient := types.NewQueryClient(clientCtx)
-
-			params := &types.QueryParamsRequest{}
-			res, err := queryClient.Params(cmd.Context(), params)
-			if err != nil {
-				return err
-			}
-
-			return clientCtx.PrintProto(&res.Params)
-		},
-	}
-
-	flags.AddQueryFlagsToCmd(cmd)
-
-	return cmd
-}
-
-// GetCmdQueryInflation implements a command to return the current minting
-// inflation value.
-func GetCmdQueryInflation() *cobra.Command {
+// GetCmdQueryInflationRate implements a command to return the current mint
+// inflation rate.
+func GetCmdQueryInflationRate() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inflation",
-		Short: "Query the current minting inflation value",
+		Short: "Query the current inflation rate",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 			queryClient := types.NewQueryClient(clientCtx)
 
-			params := &types.QueryInflationRequest{}
-			res, err := queryClient.Inflation(cmd.Context(), params)
+			request := &types.QueryInflationRateRequest{}
+			res, err := queryClient.InflationRate(cmd.Context(), request)
 			if err != nil {
 				return err
 			}
 
-			return clientCtx.PrintString(fmt.Sprintf("%s\n", res.Inflation))
+			return clientCtx.PrintString(fmt.Sprintf("%s\n", res.InflationRate))
 		},
 	}
 
@@ -87,27 +58,55 @@ func GetCmdQueryInflation() *cobra.Command {
 	return cmd
 }
 
-// GetCmdQueryAnnualProvisions implements a command to return the current minting
-// annual provisions value.
+// GetCmdQueryAnnualProvisions implements a command to return the current mint
+// annual provisions.
 func GetCmdQueryAnnualProvisions() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "annual-provisions",
-		Short: "Query the current minting annual provisions value",
+		Short: "Query the current annual provisions",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			clientCtx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 			queryClient := types.NewQueryClient(clientCtx)
 
-			params := &types.QueryAnnualProvisionsRequest{}
-			res, err := queryClient.AnnualProvisions(cmd.Context(), params)
+			request := &types.QueryAnnualProvisionsRequest{}
+			res, err := queryClient.AnnualProvisions(cmd.Context(), request)
 			if err != nil {
 				return err
 			}
 
 			return clientCtx.PrintString(fmt.Sprintf("%s\n", res.AnnualProvisions))
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
+}
+
+// GetCmdQueryGenesisTime implements a command to return the genesis time.
+func GetCmdQueryGenesisTime() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "genesis-time",
+		Short: "Query the genesis time",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+
+			request := &types.QueryGenesisTimeRequest{}
+			res, err := queryClient.GenesisTime(cmd.Context(), request)
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintString(fmt.Sprintf("%s\n", res.GenesisTime))
 		},
 	}
 
