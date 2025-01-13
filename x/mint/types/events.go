@@ -1,10 +1,8 @@
 package types
 
-// Minting module event types
 const (
 	EventTypeMint = ModuleName
 
-	AttributeKeyBondedRatio      = "bonded_ratio"
-	AttributeKeyInflation        = "inflation"
+	AttributeKeyInflationRate    = "inflation_rate"
 	AttributeKeyAnnualProvisions = "annual_provisions"
 )

@@ -9,20 +9,12 @@ import (
 
 var _ types.QueryServer = Keeper{}
 
-// Params returns params of the mint module.
-func (k Keeper) Params(c context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c)
-	params := k.GetParams(ctx)
-
-	return &types.QueryParamsResponse{Params: params}, nil
-}
-
-// Inflation returns minter.Inflation of the mint module.
-func (k Keeper) Inflation(c context.Context, _ *types.QueryInflationRequest) (*types.QueryInflationResponse, error) {
+// InflationRate returns minter.InflationRate of the mint module.
+func (k Keeper) InflationRate(c context.Context, _ *types.QueryInflationRateRequest) (*types.QueryInflationRateResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 	minter := k.GetMinter(ctx)
 
-	return &types.QueryInflationResponse{Inflation: minter.Inflation}, nil
+	return &types.QueryInflationRateResponse{InflationRate: minter.InflationRate}, nil
 }
 
 // AnnualProvisions returns minter.AnnualProvisions of the mint module.
@@ -31,4 +23,12 @@ func (k Keeper) AnnualProvisions(c context.Context, _ *types.QueryAnnualProvisio
 	minter := k.GetMinter(ctx)
 
 	return &types.QueryAnnualProvisionsResponse{AnnualProvisions: minter.AnnualProvisions}, nil
+}
+
+// GenesisTime returns the GensisTime of the mint module.
+func (k Keeper) GenesisTime(c context.Context, _ *types.QueryGenesisTimeRequest) (*types.QueryGenesisTimeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+	genesisTime := k.GetGenesisTime(ctx).GenesisTime
+
+	return &types.QueryGenesisTimeResponse{GenesisTime: genesisTime}, nil
 }
