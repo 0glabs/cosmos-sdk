@@ -22,7 +22,7 @@ import (
 )
 
 // ConsensusVersion defines the current x/mint module consensus version.
-const ConsensusVersion = 2
+const ConsensusVersion = 3
 
 var (
 	_ module.BeginBlockAppModule = AppModule{}
